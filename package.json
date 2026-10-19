@@ -1,0 +1,31 @@
+{
+  "name": "mt4-quote-bridge-cli",
+  "version": "0.1.0",
+  "description": "Command-line client for the MT4 Quote Bridge server REST API (quotes, candles, indicators, history, demo orders)",
+  "type": "module",
+  "bin": {
+    "mt4-quote-bridge": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "commander": "^15.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  }
+}
