@@ -25,6 +25,32 @@ type Candle = {
   volume?: number;
   complete?: boolean;
 };
+type SymbolInfo = {
+  symbol: string;
+  broker: string;
+  bid: number;
+  ask: number;
+  digits: number;
+  tickSize: number;
+  tickValue?: number;
+  minLot: number;
+  maxLot: number;
+  lotStep: number;
+  stopLevel: number;
+  freezeLevel: number;
+  tradeAllowed: boolean;
+  time: number;
+  spec: {
+    contractSize: number;
+    marginRequired: number;
+    swapLong: number;
+    swapShort: number;
+    swapType: string | number;
+    profitCurrency?: string;
+    starting: number;
+    expiration: number;
+  } | null;
+};
 type Quote = {
   symbol: string;
   broker: string;
@@ -80,6 +106,7 @@ List symbols:
 Shorthand (subject first, as documented):
   symbol <SYMBOL> <PERIOD> [COUNT]       last COUNT candles (OHLC)      = symbol candles
   symbol <SYMBOL> [quote]                current bid/ask/spread         = symbol quote
+  symbol <SYMBOL> info                   lot limits, contract size, swaps, expiry
   symbol <SYMBOL> ask|bid                just the ask or bid price
   symbol <SYMBOL> buy|sell <LOTS>        market order (demo accounts only)
   symbol <SYMBOL> buy-limit|sell-limit|buy-stop|sell-stop <LOTS> <PRICE>
@@ -93,6 +120,7 @@ Examples:
   mt4-quote-bridge symbol list
   mt4-quote-bridge symbol AUDUSD 1H 30
   mt4-quote-bridge symbol XAUUSD ask
+  mt4-quote-bridge symbol XAUUSD info
   mt4-quote-bridge symbol AUDUSD buy 0.1 --sl 0.6450 --tp 0.6600
   mt4-quote-bridge symbol AUDUSD buy-limit 0.1 0.6480 --sl 0.6430 --tp 0.6580`
     );
@@ -219,6 +247,80 @@ Examples:
       print(
         `${q.symbol} (${q.broker})  bid ${f(q.bid)}  ask ${f(q.ask)}  spread ${q.spread} pts  [${q.source}${q.time ? ", " + formatTime(q.time) : ""}]`
       );
+    });
+
+  outputOptions(
+    feedOptions(
+      symbol
+        .command("info")
+        .usage("<SYMBOL> [options]")
+        .description(
+          "show trading specs: lot limits, contract size, margin, swaps, expiry"
+        )
+        .argument("<symbol>", "symbol, e.g. XAUUSD")
+    ),
+    false
+  )
+    .addHelpText(
+      "after",
+      `
+Shorthand: mt4-quote-bridge symbol <SYMBOL> info
+
+Reads the broker's contract details fresh from MT4 (MarketInfo). Needs the
+symbol's terminal online with the QuoteBridge EA; otherwise exit 1.
+
+Fields:
+  LOTS        smallest order, step between sizes, largest order
+  TICK        smallest price move, and its value for 1.0 lot (deposit currency)
+  STOPS       minimum SL/TP distance and freeze distance, in points
+  TRADING     whether the broker allows trading the symbol now
+  CONTRACT    units per 1.0 lot, and the currency profit is counted in
+  MARGIN      free margin needed to open 1.0 lot (deposit currency)
+  SWAP        overnight swap for long/short and its unit
+  EXPIRY      when the instrument expires (futures-style CFDs); "none" for
+              rolling CFDs and FX. Shown with its start time when set.
+CONTRACT, MARGIN, SWAP and EXPIRY need QuoteBridge EA 1.07 or later (JSON:
+spec = null on older EAs). Times are broker-server time.
+${FEED_HELP}
+JSON: { symbol, broker, terminal, feed, bid, ask, digits, point, tickSize,
+tickValue, minLot, maxLot, lotStep, stopLevel, freezeLevel, tradeAllowed, time,
+received, spec: { contractSize, marginRequired, swapLong, swapShort, swapType,
+profitCurrency, starting, expiration } | null }
+starting/expiration are Unix seconds in broker time; 0 means none.
+
+Examples:
+  mt4-quote-bridge symbol XAUUSD info
+  mt4-quote-bridge symbol info US500 --json`
+    )
+    .action(async (name: string, o) => {
+      const i = await (
+        await ApiClient.fromProfile()
+      ).get<SymbolInfo>(
+        `/api/v1/symbols/${encodeURIComponent(name)}/info`,
+        feedQuery(o)
+      );
+      if (o.json) return print(JSON.stringify(i, null, 2));
+      const f = fixed(i.digits);
+      const s = i.spec;
+      const lines = [
+        `${i.symbol} (${i.broker})  bid ${f(i.bid)}  ask ${f(i.ask)}  [${formatTime(i.time)}]`,
+        `Lots          min ${i.minLot} · step ${i.lotStep} · max ${i.maxLot}`,
+        `Tick          size ${i.tickSize}${i.tickValue === undefined ? "" : ` · value ${i.tickValue} per lot`}`,
+        `Stops         min ${i.stopLevel} pts · freeze ${i.freezeLevel} pts`,
+        `Trading       ${i.tradeAllowed ? "allowed" : "disabled by the broker"}`,
+      ];
+      if (s)
+        lines.push(
+          `Contract      ${s.contractSize} per lot${s.profitCurrency ? ` · profit in ${s.profitCurrency}` : ""}`,
+          `Margin        ${s.marginRequired} per lot`,
+          `Swap          long ${s.swapLong} · short ${s.swapShort} (${s.swapType})`,
+          `Expiry        ${s.expiration ? formatTime(s.expiration) : "none"}${s.starting ? ` (trading from ${formatTime(s.starting)})` : ""}`
+        );
+      else
+        lines.push(
+          "Contract, margin, swap and expiry need QuoteBridge EA 1.07 (recompile it in MetaEditor and re-attach)."
+        );
+      print(lines.join("\n"));
     });
 
   for (const side of ["ask", "bid"] as const)

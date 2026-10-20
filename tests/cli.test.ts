@@ -9,12 +9,40 @@ import { normalizeServer } from "../src/config.js";
 import { csv, table } from "../src/output.js";
 import { formatTime, parseTime } from "../src/time.js";
 
+/** Runs src/cli.ts in a child process with `env`, from `cwd`. */
+async function cliRunner(env: NodeJS.ProcessEnv, cwd: string) {
+  const { spawn } = await import("node:child_process");
+  const { join } = await import("node:path");
+  return (...args: string[]) =>
+    new Promise<{ code: number | null; out: string; err: string }>(
+      (resolve) => {
+        const child = spawn(
+          process.execPath,
+          // cwd may be a temp dir, so resolve tsx from here.
+          [
+            "--import",
+            import.meta.resolve("tsx"),
+            join(process.cwd(), "src/cli.ts"),
+            ...args,
+          ],
+          { env, cwd }
+        );
+        let out = "",
+          err = "";
+        child.stdout.on("data", (b) => (out += b));
+        child.stderr.on("data", (b) => (err += b));
+        child.on("close", (code) => resolve({ code, out, err }));
+      }
+    );
+}
+
 test("shorthand arguments rewrite to canonical subcommands", () => {
   const cases: [string, string][] = [
     ["symbol AUDUSD 1H 30", "symbol candles AUDUSD 1H 30"],
     ["symbol AUDUSD H1", "symbol candles AUDUSD H1"],
     ["symbol AUDUSD 15M --csv", "symbol candles AUDUSD 15M --csv"],
     ["symbol AUDUSD ask", "symbol ask AUDUSD"],
+    ["symbol XAUUSD info --json", "symbol info XAUUSD --json"],
     ["symbol AUDUSD", "symbol quote AUDUSD"],
     ["symbol AUDUSD --json", "symbol quote AUDUSD --json"],
     ["symbol AUDUSD buy 0.1 --sl 1", "symbol buy AUDUSD 0.1 --sl 1"],
@@ -308,7 +336,6 @@ test("auth login asks only for an API key, verifies it and saves it", async () =
 });
 
 test("hist download saves an .hst file's CSV and refuses ambiguous symbols", async () => {
-  const { spawn } = await import("node:child_process");
   const { mkdtemp, readFile, readdir, rm } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
@@ -364,27 +391,8 @@ test("hist download saves an .hst file's CSV and refuses ambiguous symbols", asy
     MT4QB_SERVER: origin,
     MT4QB_API_KEY: key,
   };
-  const cli = (...args: string[]) =>
-    new Promise<{ code: number | null; out: string; err: string }>(
-      (resolve) => {
-        const child = spawn(
-          process.execPath,
-          // Runs in the temp dir (default save location), so resolve tsx here.
-          [
-            "--import",
-            import.meta.resolve("tsx"),
-            join(process.cwd(), "src/cli.ts"),
-            ...args,
-          ],
-          { env, cwd: dir }
-        );
-        let out = "",
-          err = "";
-        child.stdout.on("data", (b) => (out += b));
-        child.stderr.on("data", (b) => (err += b));
-        child.on("close", (code) => resolve({ code, out, err }));
-      }
-    );
+  // Runs in the temp dir, the default save location.
+  const cli = await cliRunner(env, dir);
   try {
     const saved = await cli(
       "hist",
@@ -435,5 +443,79 @@ test("hist download saves an .hst file's CSV and refuses ambiguous symbols", asy
   } finally {
     server.close();
     await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("symbol info shows lot limits, contract spec and expiry", async () => {
+  const key = "qbk_" + "ef".repeat(32);
+  const info = (spec: unknown) => ({
+    symbol: "GOLD.DEC26",
+    broker: "Broker Ltd",
+    terminal: "Term",
+    feed: "f1",
+    bid: 4080.5,
+    ask: 4081,
+    digits: 2,
+    point: 0.01,
+    tickSize: 0.01,
+    tickValue: 0.01,
+    minLot: 0.1,
+    maxLot: 20,
+    lotStep: 0.1,
+    stopLevel: 30,
+    freezeLevel: 0,
+    tradeAllowed: true,
+    time: 1787059800,
+    received: 1787059800000,
+    spec,
+  });
+  const spec = {
+    contractSize: 1,
+    marginRequired: 408.1,
+    swapLong: -12.5,
+    swapShort: 3.25,
+    swapType: "points",
+    profitCurrency: "USD",
+    starting: 0,
+    expiration: 1798675200,
+  };
+  const server = createServer((req, res) => {
+    const url = new URL(req.url!, "http://x");
+    res.writeHead(200, { "content-type": "application/json" });
+    if (url.pathname === "/api/v1/symbols/GOLD.DEC26/info")
+      return res.end(JSON.stringify(info(spec)));
+    if (url.pathname === "/api/v1/symbols/OLD/info")
+      return res.end(JSON.stringify({ ...info(null), symbol: "OLD" }));
+    res.writeHead(404);
+    res.end('{"error":"Unknown symbol"}');
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const { join } = await import("node:path");
+  const { tmpdir } = await import("node:os");
+  const cli = await cliRunner(
+    {
+      ...process.env,
+      MT4QB_CONFIG: join(tmpdir(), "qb-cli-info-unused.json"),
+      MT4QB_SERVER: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+      MT4QB_API_KEY: key,
+    },
+    process.cwd()
+  );
+  try {
+    const shown = await cli("symbol", "GOLD.DEC26", "info");
+    assert.equal(shown.code, 0, shown.err);
+    assert.match(shown.out, /Lots +min 0\.1 · step 0\.1 · max 20/);
+    assert.match(shown.out, /Contract +1 per lot · profit in USD/);
+    assert.match(shown.out, /Swap +long -12\.5 · short 3\.25 \(points\)/);
+    assert.match(shown.out, /Expiry +2026-12-31 00:00/);
+    const json = await cli("symbol", "info", "GOLD.DEC26", "--json");
+    assert.deepEqual(JSON.parse(json.out).spec, spec);
+    const old = await cli("symbol", "OLD", "info");
+    assert.equal(old.code, 0, old.err);
+    assert.match(old.out, /Lots +min 0\.1/);
+    assert.match(old.out, /EA 1\.07/);
+  } finally {
+    server.close();
   }
 });

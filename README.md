@@ -66,6 +66,7 @@ locally; revoke it in the dashboard to disable it everywhere.
 | `symbol list [--online]` | Symbols with broker, status, last bid/ask, **live periods** and **history periods** |
 | `symbol AUDUSD 1H [30]` | Last N OHLC candles (live EA chart, else imported history; `--source`) |
 | `symbol AUDUSD` / `symbol AUDUSD ask` / `bid` | Current quote, or a single price for scripts |
+| `symbol XAUUSD info` | Lot min/step/max, tick value, stop levels; contract size, margin, swaps and expiry (EA 1.07+) |
 | `symbol AUDUSD buy\|sell <lots> [--sl P] [--tp P]` | Market order (demo accounts only) |
 | `symbol AUDUSD buy-limit\|sell-limit\|buy-stop\|sell-stop <lots> <price> [--sl] [--tp] [--expiration]` | Pending order |
 | `indicator list` | Enabled indicators and their parameters |

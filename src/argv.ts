@@ -9,6 +9,7 @@ export const SYMBOL_ACTIONS = [
   "list",
   "candles",
   "quote",
+  "info",
   "ask",
   "bid",
   "buy",

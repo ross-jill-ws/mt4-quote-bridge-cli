@@ -24,6 +24,8 @@ A `read` (query only) key reads everything. Buying and selling needs a `trade` k
 
 Run `mt4-quote-bridge symbol list --json` first. Symbol names are the broker's own (`GOLD30`, `US500`), so map the user's wording to a listed name. The list also gives each symbol's **live periods** (served from an open MT4 chart) and **history periods** (imported). A symbol missing from the list has no MT4 chart with the QuoteBridge EA attached. Tell the user to open one.
 
+For contract details (lot min/step/max, contract size, margin, swaps, expiry), run `symbol <SYMBOL> info --json`. `spec: null` means the EA is older than 1.07; the user must recompile and re-attach it to get those fields.
+
 ## 3. Read the data
 
 - Pass `--json` whenever you parse the output; tables are for people.
