@@ -225,3 +225,83 @@ test("verifyServer adopts same-host http->https redirects and refuses others", a
     server.close();
   }
 });
+
+test("auth login asks only for an API key, verifies it and saves it", async () => {
+  const { spawn } = await import("node:child_process");
+  const { mkdtemp, readFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const key = "qbk_" + "ab".repeat(32);
+  const server = createServer((req, res) => {
+    const send = (status: number, body: unknown) => {
+      res.writeHead(status, { "content-type": "application/json" });
+      res.end(JSON.stringify(body));
+    };
+    if (req.url === "/api/v1/info")
+      return send(200, { service: "mt4-quote-bridge", apiVersion: 1 });
+    if (
+      req.url === "/api/auth/session" &&
+      req.headers.authorization === `Bearer ${key}`
+    )
+      return send(200, {
+        username: "admin",
+        key: { name: "laptop", prefix: key.slice(0, 12), scope: "read" },
+        expires: null,
+      });
+    send(401, { error: "API key missing, invalid or expired." });
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const dir = await mkdtemp(join(tmpdir(), "qb-cli-login-"));
+  const config = join(dir, "config.json");
+  const env: NodeJS.ProcessEnv = { ...process.env, MT4QB_CONFIG: config };
+  for (const name of ["MT4QB_SERVER", "MT4QB_API_KEY", "MT4QB_TOKEN"])
+    delete env[name];
+  const login = (input: string) =>
+    new Promise<{ code: number | null; out: string; err: string }>(
+      (resolve) => {
+        const child = spawn(
+          process.execPath,
+          [
+            "--import",
+            "tsx",
+            "src/cli.ts",
+            "auth",
+            "login",
+            "-s",
+            origin,
+            "--api-key-stdin",
+          ],
+          { env }
+        );
+        let out = "",
+          err = "";
+        child.stdout.on("data", (b) => (out += b));
+        child.stderr.on("data", (b) => (err += b));
+        child.on("close", (code) => resolve({ code, out, err }));
+        child.stdin.end(input);
+      }
+    );
+  try {
+    const bad = await login("not-a-key\n");
+    assert.equal(bad.code, 3);
+    assert.match(bad.err, /qbk_/);
+    const revoked = await login("qbk_" + "0".repeat(64) + "\n");
+    assert.equal(revoked.code, 3);
+    const ok = await login(key + "\n");
+    assert.equal(ok.code, 0, ok.err);
+    assert.match(
+      ok.out,
+      /API key "laptop" \(query only\)\. Key does not expire/
+    );
+    const saved = JSON.parse(await readFile(config, "utf8"));
+    assert.equal(saved.server, origin);
+    assert.equal(saved.token, key);
+    assert.equal(saved.scope, "read");
+    assert.equal(saved.expires, null);
+  } finally {
+    server.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});

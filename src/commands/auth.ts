@@ -16,24 +16,26 @@ import { formatMillis } from "../time.js";
 
 export function authCommand() {
   const auth = new Command("auth")
-    .description("sign in to a Quote Bridge server and manage the saved token")
+    .description("sign in to a Quote Bridge server with an API key")
     .addHelpText(
       "after",
       `
 Subcommands:
   server   set the Quote Bridge server URL (prompts; default ${DEFAULT_SERVER})
-  login    sign in with the dashboard username/password and save a token
-  status   show the saved server, user and token expiry (verifies with server)
-  logout   revoke the token on the server and delete it locally
+  login    save an API key created in the dashboard (prompts for the key)
+  status   show the saved server, key name, scope and expiry (verifies with server)
+  logout   delete the saved API key locally
 
 Typical first run:
-  mt4-quote-bridge auth server     # enter the server URL
-  mt4-quote-bridge auth login      # enter username and password
+  1. In the dashboard: user icon (top right) -> API keys -> Create key.
+     Scope "Query only" reads data; "Query + buy/sell" can also place orders.
+  2. mt4-quote-bridge auth server     # enter the server URL
+  3. mt4-quote-bridge auth login      # paste the API key
 
-The server URL and token are saved in ${configPath()}
-(override with MT4QB_CONFIG). Tokens are valid for 7 days from sign-in and
-survive server restarts; run "auth login" again when one expires.
-Environment overrides: MT4QB_SERVER (server URL), MT4QB_TOKEN (token).`
+The server URL and API key are saved in ${configPath()}
+(override with MT4QB_CONFIG). Keys never expire unless an expiry was chosen
+when creating them; revoke them in the dashboard.
+Environment overrides: MT4QB_SERVER (server URL), MT4QB_API_KEY (API key).`
     );
 
   auth
@@ -58,9 +60,9 @@ the current server and changes nothing.
 that the URL is a compatible Quote Bridge server (GET /api/v1/info) unless
 --no-check is given. If an http:// URL redirects to https:// on the same host
 (ngrok and most HTTPS proxies do this), the https:// URL is saved instead.
-Other redirects are refused, so the token is never sent to a different host.
+Other redirects are refused, so the API key is never sent to a different host.
 
-Switching to a different server discards the saved token, because tokens are
+Switching to a different server discards the saved API key, because keys are
 only valid on the server that issued them. Run "auth login" afterwards.
 MT4QB_SERVER, when set, overrides the saved server for every command.
 
@@ -94,7 +96,7 @@ Exit codes: 0 saved (or printed), 1 invalid URL / server unreachable or incompat
           (upgraded ? `${entered} redirects to HTTPS; using it.\n` : "") +
             `Server set to ${server}${changed ? "" : " (unchanged)"}.` +
             (droppedToken
-              ? "\nThe previous server's token was removed. Run: mt4-quote-bridge auth login"
+              ? "\nThe previous server's API key was removed. Run: mt4-quote-bridge auth login"
               : saved?.token && !changed
                 ? ""
                 : "\nNext: mt4-quote-bridge auth login")
@@ -103,15 +105,14 @@ Exit codes: 0 saved (or printed), 1 invalid URL / server unreachable or incompat
 
   auth
     .command("login")
-    .description("sign in and save a 7-day API token to your user profile")
+    .description("sign in with an API key from the dashboard and save it")
     .option(
       "-s, --server <url>",
       `Quote Bridge server URL (default: saved server, MT4QB_SERVER or ${DEFAULT_SERVER})`
     )
-    .option("-u, --user <name>", "dashboard username (APP_USER on the server)")
     .option(
-      "--password-stdin",
-      "read the password from stdin instead of prompting (for scripts)"
+      "--api-key-stdin",
+      "read the API key from stdin instead of prompting (for scripts)"
     )
     .option("--json", "print the result as JSON")
     .addHelpText(
@@ -120,19 +121,23 @@ Exit codes: 0 saved (or printed), 1 invalid URL / server unreachable or incompat
 Server: --server, else MT4QB_SERVER, else the saved server ("auth server").
 When none is set, login prompts for it (default ${DEFAULT_SERVER}).
 
-Signs in with the same username/password as the web dashboard (server
-APP_USER / APP_PASSWORD). The server returns a token that is valid for 7 days;
-it is saved to ${configPath()}
-with owner-only permissions. The password itself is never stored.
+Prompts for an API key (input hidden). Create one in the dashboard: user icon
+(top right) -> API keys -> Create key. The key looks like qbk_<64 hex> and is
+shown only once. Its scope decides what the CLI may do:
+  Query only        symbols, candles, indicators, history, positions, budget
+  Query + buy/sell  also "symbol buy/sell" (demo orders)
 
-Before signing in, the CLI checks that the server speaks a compatible REST API
-version (GET /api/v1/info).
+The key is checked with the server (GET /api/auth/session) and saved to
+${configPath()}
+with owner-only permissions. Before that, the CLI checks that the server speaks
+a compatible REST API version (GET /api/v1/info).
 
 Examples:
-  mt4-quote-bridge auth login --server http://localhost:3000 --user admin
-  echo "$QB_PASSWORD" | mt4-quote-bridge auth login -s http://10.0.0.5:3000 -u admin --password-stdin
+  mt4-quote-bridge auth login
+  mt4-quote-bridge auth login --server http://localhost:3000
+  echo "$QB_API_KEY" | mt4-quote-bridge auth login -s http://10.0.0.5:3000 --api-key-stdin
 
-Exit codes: 0 signed in, 1 error (wrong password, unreachable, incompatible).`
+Exit codes: 0 signed in, 1 error (unreachable, incompatible), 3 key rejected.`
     )
     .action(async (o) => {
       const saved = await loadProfile();
@@ -147,35 +152,29 @@ Exit codes: 0 signed in, 1 error (wrong password, unreachable, incompatible).`
         process.stderr.write(
           `${entered} redirects to HTTPS; using ${server}\n`
         );
-      const client = new ApiClient(server);
-      let username: string | undefined = o.user;
-      if (!username)
-        username = interactive()
-          ? await ask(
-              `Username [${saved?.username ?? "admin"}]: `,
-              saved?.username ?? "admin"
-            )
-          : (saved?.username ?? "admin");
-      let password: string;
-      if (o.passwordStdin) password = await readStdin();
-      else if (interactive()) password = await askHidden("Password: ");
+      let key: string;
+      if (o.apiKeyStdin) key = await readStdin();
+      else if (interactive()) key = await askHidden("API key: ");
       else
         throw new CliError(
-          "No terminal for a password prompt; use --password-stdin."
+          "No terminal for an API key prompt; use --api-key-stdin."
         );
-      const result = await client.request<{
-        token: string;
-        username: string;
-        expires: number;
-      }>("POST", "/api/auth/token", {
-        auth: false,
-        body: { username, password },
-      });
+      key = key.trim();
+      if (!isApiKey(key))
+        throw new CliError(
+          "That is not a Quote Bridge API key (expected qbk_ followed by 64 hex characters). Create one in the dashboard: user icon -> API keys.",
+          EXIT.auth
+        );
+      const session = await new ApiClient(server, key).get<Session>(
+        "/api/auth/session"
+      );
       await saveProfile({
         server,
-        username: result.username,
-        token: result.token,
-        expires: result.expires,
+        username: session.username,
+        token: key,
+        keyName: session.key.name,
+        scope: session.key.scope,
+        expires: session.expires,
         savedAt: Date.now(),
       });
       if (o.json)
@@ -183,8 +182,9 @@ Exit codes: 0 signed in, 1 error (wrong password, unreachable, incompatible).`
           JSON.stringify(
             {
               server,
-              username: result.username,
-              expires: result.expires,
+              username: session.username,
+              key: session.key,
+              expires: session.expires,
               config: configPath(),
             },
             null,
@@ -193,24 +193,24 @@ Exit codes: 0 signed in, 1 error (wrong password, unreachable, incompatible).`
         );
       else
         print(
-          `Signed in to ${server} as ${result.username}. Token expires ${formatMillis(result.expires)}.\nSaved to ${configPath()}`
+          `Signed in to ${server} as ${session.username} with API key "${session.key.name}" (${scopeLabel(session.key.scope)}). ${expiryText(session.expires)}.\nSaved to ${configPath()}`
         );
     });
 
   auth
     .command("status")
     .description(
-      "show the current sign-in and verify the token with the server"
+      "show the current sign-in and verify the API key with the server"
     )
     .option("--json", "print the result as JSON")
     .addHelpText(
       "after",
       `
-Shows the server URL, username and token expiry, and asks the server whether
-the token is still valid (GET /api/auth/session).
+Shows the server URL, user, API key name, scope and expiry, and asks the
+server whether the key is still valid (GET /api/auth/session).
 
-Exit codes: 0 signed in and valid, 3 not signed in / token invalid or expired,
-1 server unreachable.`
+Exit codes: 0 signed in and valid, 3 not signed in / key invalid, expired or
+revoked, 1 server unreachable.`
     )
     .action(async (o) => {
       const { server, token, profile } = await connection();
@@ -221,11 +221,16 @@ Exit codes: 0 signed in and valid, 3 not signed in / token invalid or expired,
         );
       const client = new ApiClient(server, token);
       await client.checkCompatible();
-      const session = await client.get<{ username: string; expires: number }>(
-        "/api/auth/session"
-      );
-      const daysLeft = (session.expires - Date.now()) / 86400000;
-      const source = process.env.MT4QB_TOKEN ? "MT4QB_TOKEN" : configPath();
+      const session = await client.get<Session>("/api/auth/session");
+      const daysLeft =
+        session.expires === null
+          ? null
+          : (session.expires - Date.now()) / 86400000;
+      const source = process.env.MT4QB_API_KEY
+        ? "MT4QB_API_KEY"
+        : process.env.MT4QB_TOKEN
+          ? "MT4QB_TOKEN"
+          : configPath();
       if (o.json)
         print(
           JSON.stringify(
@@ -239,10 +244,18 @@ Exit codes: 0 signed in and valid, 3 not signed in / token invalid or expired,
           [
             `Server:   ${server}`,
             `User:     ${session.username}`,
-            `Expires:  ${formatMillis(session.expires)} (${daysLeft.toFixed(1)} days left)`,
-            `Token:    ${source}`,
-            ...(daysLeft < 1
-              ? ["Warning:  token expires within a day; run auth login again."]
+            `API key:  ${session.key.name} (${session.key.prefix}…)`,
+            `Scope:    ${scopeLabel(session.key.scope)}`,
+            `Expires:  ${
+              session.expires === null
+                ? "never"
+                : `${formatMillis(session.expires)} (${daysLeft!.toFixed(1)} days left)`
+            }`,
+            `Source:   ${source}`,
+            ...(daysLeft !== null && daysLeft < 7
+              ? [
+                  "Warning:  key expires within a week; create a new one in the dashboard and run auth login.",
+                ]
               : []),
           ].join("\n")
         );
@@ -250,28 +263,39 @@ Exit codes: 0 signed in and valid, 3 not signed in / token invalid or expired,
 
   auth
     .command("logout")
-    .description("revoke the saved token on the server and delete it locally")
+    .description("delete the saved API key locally")
     .addHelpText(
       "after",
       `
-Revokes the token server-side (POST /api/auth/revoke) and removes it from
-${configPath()}. The token is removed locally even when
-the server is unreachable. The saved server URL is kept.`
+Removes the API key from ${configPath()}. The saved
+server URL is kept. The key itself stays valid on the server; revoke it in the
+dashboard (user icon -> API keys) if it should stop working everywhere.`
     )
     .action(async () => {
-      const { server, token } = await connection();
-      let note = "";
-      if (token)
-        try {
-          await new ApiClient(server, token).post("/api/auth/revoke", {});
-        } catch (e) {
-          note = ` (server revoke failed: ${e instanceof Error ? e.message : e})`;
-        }
+      const { server } = await connection();
       await clearToken();
-      print(`Signed out of ${server}${note}.`);
+      print(
+        `Removed the saved API key for ${server}. To disable the key itself, revoke it in the dashboard (user icon -> API keys).`
+      );
     });
   return auth;
 }
+
+type Session = {
+  username: string;
+  key: { name: string; prefix: string; scope: "read" | "trade" };
+  expires: number | null;
+};
+
+export const isApiKey = (value: string) => /^qbk_[a-f0-9]{64}$/.test(value);
+
+const scopeLabel = (scope: string) =>
+  scope === "trade" ? "query + buy/sell" : "query only";
+
+const expiryText = (expires: number | null) =>
+  expires === null
+    ? "Key does not expire"
+    : `Key expires ${formatMillis(expires)}`;
 
 /** Use the given URL, or prompt with `fallback` as the Enter default. */
 async function chooseServer(url: string | undefined, fallback: string) {

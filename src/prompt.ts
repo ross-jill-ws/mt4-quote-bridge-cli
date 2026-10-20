@@ -17,7 +17,7 @@ export async function confirm(question: string) {
   return /^y(es)?$/i.test(await ask(`${question} [y/N] `));
 }
 
-/** Read a password without echoing it. */
+/** Read a secret (API key) without echoing it. */
 export function askHidden(question: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const stdin = process.stdin;

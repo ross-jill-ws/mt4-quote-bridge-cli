@@ -38,7 +38,7 @@ export function buildProgram() {
       `
 Getting started:
   mt4-quote-bridge auth server        # set the server URL (prompts)
-  mt4-quote-bridge auth login         # username + password, saves a 7-day token
+  mt4-quote-bridge auth login         # paste an API key from the dashboard
   mt4-quote-bridge symbols list
   mt4-quote-bridge symbol AUDUSD 1H 30
   mt4-quote-bridge indicator macd AUDUSD 1H 30
@@ -54,11 +54,11 @@ Output: human-readable tables by default; --json (full server response) and,
 for row data, --csv. Errors go to stderr.
 
 Configuration:
-  token file     ${configPath()} (MT4QB_CONFIG)
+  config file    ${configPath()} (MT4QB_CONFIG)
   MT4QB_SERVER   server URL, overrides the saved one
-  MT4QB_TOKEN    API token, overrides the saved one
+  MT4QB_API_KEY  API key, overrides the saved one
 
-Exit codes: 0 success, 1 error, 3 not signed in / token expired,
+Exit codes: 0 success, 1 error, 3 not signed in / API key invalid or expired,
 4 order not executed (no confirmation), 5 order result unknown.`
     );
   return program;

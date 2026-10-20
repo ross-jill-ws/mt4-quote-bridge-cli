@@ -64,7 +64,7 @@ export class ApiClient {
         `Cannot reach Quote Bridge server at ${this.server} (${e instanceof Error ? ((e.cause as Error)?.message ?? e.message) : e}). Is it running? Check --server / MT4QB_SERVER.`
       );
     }
-    // Never follow redirects: the Bearer token must only go to the configured server.
+    // Never follow redirects: the API key must only go to the configured server.
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location") ?? "";
       throw new RedirectError(
@@ -83,7 +83,7 @@ export class ApiClient {
       }
     if (response.status === 401 && options.auth !== false)
       throw new CliError(
-        "Token missing, invalid or expired. Run: mt4-quote-bridge auth login",
+        "API key missing, invalid, expired or revoked. Create a key in the dashboard (user icon -> API keys), then run: mt4-quote-bridge auth login",
         EXIT.auth
       );
     if (data === undefined)

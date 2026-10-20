@@ -6,10 +6,13 @@ import { dirname, join } from "node:path";
 export type Profile = {
   server: string;
   username?: string;
-  /** Absent until "auth login"; always belongs to `server`. */
+  /** The API key; absent until "auth login". Always belongs to `server`. */
   token?: string;
-  /** Epoch milliseconds; the server issues seven-day tokens. */
-  expires?: number;
+  /** Dashboard name and scope of the saved API key. */
+  keyName?: string;
+  scope?: "read" | "trade";
+  /** Epoch milliseconds; null when the key never expires. */
+  expires?: number | null;
   savedAt: number;
 };
 
@@ -46,7 +49,7 @@ export async function clearProfile() {
   await rm(configPath(), { force: true });
 }
 
-/** Save the server URL. A token only stays when the server is unchanged. */
+/** Save the server URL. The API key only stays when the server is unchanged. */
 export async function saveServer(server: string) {
   const saved = await loadProfile();
   const same = !!saved && normalizeServer(saved.server) === server;
@@ -58,7 +61,7 @@ export async function saveServer(server: string) {
   return { changed: !same, droppedToken: !same && !!saved?.token };
 }
 
-/** Forget the token but keep the configured server. */
+/** Forget the API key but keep the configured server. */
 export async function clearToken() {
   const saved = await loadProfile();
   if (saved) await saveProfile({ server: saved.server, savedAt: Date.now() });
@@ -71,7 +74,9 @@ export async function connection() {
   const server = normalizeServer(
     process.env.MT4QB_SERVER ?? profile?.server ?? DEFAULT_SERVER
   );
+  // MT4QB_TOKEN is the pre-API-key name, still honoured.
   const token =
+    process.env.MT4QB_API_KEY ??
     process.env.MT4QB_TOKEN ??
     (profile && normalizeServer(profile.server) === server
       ? profile.token

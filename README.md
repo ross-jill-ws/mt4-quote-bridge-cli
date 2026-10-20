@@ -28,7 +28,7 @@ npm link            # puts `mt4-quote-bridge` on PATH
 
 ```sh
 mt4-quote-bridge auth server        # prompts: Server URL [http://localhost:3000]:
-mt4-quote-bridge auth login         # prompts for username and password
+mt4-quote-bridge auth login         # prompts for an API key
 mt4-quote-bridge auth status
 mt4-quote-bridge auth logout
 ```
@@ -37,14 +37,23 @@ mt4-quote-bridge auth logout
 with the saved server (or `http://localhost:3000`) as the default. You can
 also pass the URL directly: `auth server http://192.168.1.20:3000`. The URL is
 checked against `/api/v1/info` before it is saved. Switching to another server
-removes the old token. If no server is saved yet, `auth login` prompts for one
-too. `auth logout` keeps the server and removes only the token.
+removes the old API key. If no server is saved yet, `auth login` prompts for
+one too. `auth logout` keeps the server and removes only the saved key.
 
-Login uses the dashboard credentials (`APP_USER` / `APP_PASSWORD`). The server
-returns a 7-day token, which is saved to `~/.mt4-quote-bridge/config.json`
-with owner-only permissions. The password is never stored. For scripts, use
-`--password-stdin`. `MT4QB_SERVER`, `MT4QB_TOKEN` and `MT4QB_CONFIG` override
-the saved values.
+Login asks only for an **API key**. Create one in the dashboard: user icon (top
+right) → **API keys** → **Create key**. Choose a scope:
+
+| Scope            | Allows                                                            |
+| ---------------- | ----------------------------------------------------------------- |
+| Query only       | symbols, quotes, candles, indicators, history, positions, budget  |
+| Query + buy/sell | everything above, plus `symbol buy` / `symbol sell` (demo orders) |
+
+Expiry is optional (1 week, 1, 3, 6 or 12 months). The key (`qbk_…`) is shown
+once. `auth login` checks it with the server, then saves it to
+`~/.mt4-quote-bridge/config.json` with owner-only permissions. For scripts,
+pipe the key in with `--api-key-stdin`. `MT4QB_SERVER`, `MT4QB_API_KEY` and
+`MT4QB_CONFIG` override the saved values. `auth logout` deletes the key only
+locally; revoke it in the dashboard to disable it everywhere.
 
 ## Commands
 
@@ -83,7 +92,7 @@ no terminal and no `--yes`, nothing is sent (exit code 4).
 
 ### Exit codes
 
-`0` success · `1` error · `3` not signed in / token expired ·
+`0` success · `1` error · `3` not signed in / API key invalid or expired ·
 `4` order not executed · `5` order result unknown (check MT4 before retrying).
 
 ## Remote use (outside your network)
@@ -98,7 +107,7 @@ mt4-quote-bridge auth login
 
 If you enter an `http://` URL and the server redirects to `https://` on the
 same host, the CLI saves the `https://` URL automatically. It never follows
-any other redirect, so your token is only ever sent to the server you
+any other redirect, so your API key is only ever sent to the server you
 configured.
 
 ## Development
