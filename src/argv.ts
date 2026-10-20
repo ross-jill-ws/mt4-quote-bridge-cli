@@ -6,6 +6,7 @@
 // Rewriting to canonical subcommands gives every action its own --help.
 
 export const SYMBOL_ACTIONS = [
+  "list",
   "candles",
   "quote",
   "ask",
@@ -59,8 +60,8 @@ export function rewriteArgs(args: string[]): string[] {
     if (helpFlag(second)) return [main, "bars", "--help"];
     return [main, "bars", ...args.slice(1)];
   }
-  // `positions 12345` shows one ticket; `budget 12345` one account.
-  if ((main === "positions" || main === "budget") && /^\d+$/.test(first ?? ""))
+  // `position 12345` shows one ticket; `budget 12345` one account.
+  if ((main === "position" || main === "budget") && /^\d+$/.test(first ?? ""))
     return [main, "show", ...args.slice(1)];
   return args;
 }

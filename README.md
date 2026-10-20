@@ -9,6 +9,7 @@ all through the server's REST API v1 (`docs/rest-api.md` in the server repo).
 mt4-quote-bridge <command-main> [command-sub] [options]
 ```
 
+Command names are always singular (`symbol`, `position`, `indicator`, …).
 Every command and subcommand has detailed `--help`, written so that agent
 skills can rely on it: arguments, output columns, JSON shape, exit codes and
 examples.
@@ -59,7 +60,7 @@ locally; revoke it in the dashboard to disable it everywhere.
 
 | Command | What it does |
 | --- | --- |
-| `symbols list [--online]` | Symbols with broker, status, last bid/ask, **live periods** and **history periods** |
+| `symbol list [--online]` | Symbols with broker, status, last bid/ask, **live periods** and **history periods** |
 | `symbol AUDUSD 1H [30]` | Last N OHLC candles (live EA chart, else imported history; `--source`) |
 | `symbol AUDUSD` / `symbol AUDUSD ask` / `bid` | Current quote, or a single price for scripts |
 | `symbol AUDUSD buy\|sell <lots> [--sl P] [--tp P]` | Market order (demo accounts only) |
@@ -69,8 +70,8 @@ locally; revoke it in the dashboard to disable it everywhere.
 | `indicator macd AUDUSD 1H [30] [-p fast=8,slow=21]` | Last N values, calculated on the server |
 | `hist list` | Imported history: symbol, period, bar count, time range |
 | `hist AUDUSD 1H --start 20260901 --end 20261017 [--json\|--csv]` | Imported bars for a range (auto-paged) |
-| `positions [list] [--pending\|--all] [--symbol S]` | Open positions (or pending orders) across online accounts, with net P/L and per-account totals |
-| `positions <ticket>` | Every field of one position or pending order |
+| `position [list] [--pending\|--all] [--symbol S]` | Open positions (or pending orders) across online accounts, with net P/L and per-account totals |
+| `position <ticket>` | Every field of one position or pending order |
 | `budget [login]` | Balance, equity, floating P/L, used/free margin, margin level, trading permission |
 | `account list` / `account show <login>` | Accounts, trading permission, balance and orders |
 
@@ -115,7 +116,7 @@ configured.
 ```sh
 npm run typecheck
 npm test            # unit tests (node:test via tsx)
-npm run dev -- symbols list
+npm run dev -- symbol list
 ```
 
 Not yet available from the CLI (dashboard only): adding/removing recorded

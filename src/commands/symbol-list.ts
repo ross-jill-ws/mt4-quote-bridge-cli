@@ -17,18 +17,11 @@ type SymbolRow = {
   historyPeriods: string[];
 };
 
-export function symbolsCommand() {
-  const symbols = new Command("symbols")
-    .description("list symbols reported by MT4 and their available periods")
-    .addHelpText(
-      "after",
-      `
-Subcommands:
-  list   (default) every symbol known to the server with live/history periods`
-    );
+/** Adds `symbol list` to the `symbol` command. */
+export function addSymbolList(symbol: Command) {
   outputOptions(
-    symbols
-      .command("list", { isDefault: true })
+    symbol
+      .command("list")
       .description("list symbols with their live and imported-history periods")
       .option("--online", "only symbols with a connected EA")
   )
@@ -51,8 +44,8 @@ JSON fields per symbol: symbol, broker, terminal, feed, online, recording,
 digits, bid, ask, quoteTime, livePeriods[], historyPeriods[].
 
 Examples:
-  mt4-quote-bridge symbols list
-  mt4-quote-bridge symbols list --online --json`
+  mt4-quote-bridge symbol list
+  mt4-quote-bridge symbol list --online --json`
     )
     .action(async (o) => {
       const data = await (
@@ -77,5 +70,4 @@ Examples:
         { header: "HISTORY", value: (r) => r.historyPeriods.join(",") || "-" },
       ]);
     });
-  return symbols;
 }

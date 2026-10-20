@@ -60,22 +60,22 @@ Accounts:
   snapshot from MT4 through each account's EA. An account whose EA does not
   answer is skipped with a warning on stderr (JSON: "errors").`;
 
-export function positionsCommand() {
-  const positions = new Command("positions")
+export function positionCommand() {
+  const positions = new Command("position")
     .usage("[list|show] [args...] [options]")
     .description("open positions and pending orders across MT4 accounts")
     .addHelpText(
       "after",
       `
 Subcommands / shorthand:
-  positions [list]            open positions (default), --pending or --all
-  positions <TICKET>          = positions show <TICKET>
+  position [list]            open positions (default), --pending or --all
+  position <TICKET>          = position show <TICKET>
 
 Examples:
-  mt4-quote-bridge positions
-  mt4-quote-bridge positions list --pending
-  mt4-quote-bridge positions list --symbol AUDUSD --json
-  mt4-quote-bridge positions 12345678`
+  mt4-quote-bridge position
+  mt4-quote-bridge position list --pending
+  mt4-quote-bridge position list --symbol AUDUSD --json
+  mt4-quote-bridge position 12345678`
     );
 
   outputOptions(
@@ -96,7 +96,7 @@ Examples:
     .addHelpText(
       "after",
       `
-Shorthand: mt4-quote-bridge positions
+Shorthand: mt4-quote-bridge position
 
 Columns: ACCOUNT, TICKET, TYPE (Buy, Sell, Buy Limit, ...), SYMBOL, LOTS,
 OPEN (open/entry price), CURRENT (current market price), SL, TP,
@@ -110,9 +110,9 @@ symbol, lots, price, current, sl, tp, profit, swap, commission, net, magic,
 opened, expiration }], totals:[{ login, broker, currency, count, lots, net }], errors:[] }
 
 Examples:
-  mt4-quote-bridge positions list
-  mt4-quote-bridge positions list --all --account 12345678
-  mt4-quote-bridge positions list --symbol XAUUSD --csv`
+  mt4-quote-bridge position list
+  mt4-quote-bridge position list --all --account 12345678
+  mt4-quote-bridge position list --symbol XAUUSD --csv`
     )
     .action(async (o) => {
       const data = await (
@@ -173,14 +173,14 @@ Examples:
     .addHelpText(
       "after",
       `
-Shorthand: mt4-quote-bridge positions <TICKET>
+Shorthand: mt4-quote-bridge position <TICKET>
 
 Looks the ticket up in every online account (or --account) and prints all
 fields, including swap, commission, magic number and pending expiration.
 ${ACCOUNT_HELP}
 
 Example:
-  mt4-quote-bridge positions 12345678 --json`
+  mt4-quote-bridge position 12345678 --json`
     )
     .action(async (ticket: string, o) => {
       const p = await (

@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { ApiClient } from "../client.js";
 import { emit, formatOf, print } from "../output.js";
 import { outputOptions } from "./common.js";
-import { accountOptions, warnErrors } from "./positions.js";
+import { accountOptions, warnErrors } from "./position.js";
 
 type Budget = {
   login: number;

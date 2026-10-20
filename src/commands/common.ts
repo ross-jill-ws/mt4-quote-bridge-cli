@@ -2,7 +2,7 @@ import { Command, InvalidArgumentError, Option } from "commander";
 
 export const FEED_HELP = `
 Symbol selection:
-  SYMBOL is the broker's symbol name as listed by "symbols list" (case-insensitive).
+  SYMBOL is the broker's symbol name as listed by "symbol list" (case-insensitive).
   If the same symbol is reported by several terminals/brokers, narrow it with
   --broker / --terminal (substring match) or pass the exact --feed identifier.`;
 
@@ -15,7 +15,7 @@ export function feedOptions(cmd: Command) {
     )
     .option(
       "--feed <id>",
-      'exact feed identifier from "symbols list --json" (overrides --broker/--terminal)'
+      'exact feed identifier from "symbol list --json" (overrides --broker/--terminal)'
     );
 }
 

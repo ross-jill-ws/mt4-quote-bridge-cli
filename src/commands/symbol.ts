@@ -14,6 +14,7 @@ import {
   positiveNumber,
   sourceOption,
 } from "./common.js";
+import { addSymbolList } from "./symbol-list.js";
 
 type Candle = {
   time: number;
@@ -66,11 +67,16 @@ const ORDER_TYPES = {
 
 export function symbolCommand() {
   const symbol = new Command("symbol")
-    .usage("<SYMBOL> <action> [args...] [options]")
-    .description("candles, live quotes and demo orders for one symbol")
+    .usage("list | <SYMBOL> <action> [args...] [options]")
+    .description(
+      "list symbols; candles, live quotes and demo orders for one symbol"
+    )
     .addHelpText(
       "after",
       `
+List symbols:
+  symbol list [--online]                 symbols with live/history periods
+
 Shorthand (subject first, as documented):
   symbol <SYMBOL> <PERIOD> [COUNT]       last COUNT candles (OHLC)      = symbol candles
   symbol <SYMBOL> [quote]                current bid/ask/spread         = symbol quote
@@ -84,11 +90,14 @@ Each action has detailed help, e.g.:
   mt4-quote-bridge symbol candles --help
 
 Examples:
+  mt4-quote-bridge symbol list
   mt4-quote-bridge symbol AUDUSD 1H 30
   mt4-quote-bridge symbol XAUUSD ask
   mt4-quote-bridge symbol AUDUSD buy 0.1 --sl 0.6450 --tp 0.6600
   mt4-quote-bridge symbol AUDUSD buy-limit 0.1 0.6480 --sl 0.6430 --tp 0.6580`
     );
+
+  addSymbolList(symbol);
 
   outputOptions(
     sourceOption(
@@ -115,7 +124,7 @@ Shorthand: mt4-quote-bridge symbol <SYMBOL> <PERIOD> [COUNT]
 
 Shows the most recent COUNT candles, oldest first. With --source auto (default)
 candles come live from an MT4 chart running the QuoteBridge EA when that period
-is live (see LIVE in "symbols list"); otherwise from imported HST history.
+is live (see LIVE in "symbol list"); otherwise from imported HST history.
 The last live candle is still forming and is marked "*" (JSON: complete=false).
 Live data can take a few seconds on the first request while MT4 sends bars.
 ${PERIOD_HELP}

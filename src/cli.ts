@@ -9,9 +9,8 @@ import { authCommand } from "./commands/auth.js";
 import { budgetCommand } from "./commands/budget.js";
 import { histCommand } from "./commands/hist.js";
 import { indicatorCommand } from "./commands/indicator.js";
-import { positionsCommand } from "./commands/positions.js";
+import { positionCommand } from "./commands/position.js";
 import { symbolCommand } from "./commands/symbol.js";
-import { symbolsCommand } from "./commands/symbols.js";
 
 const { version } = createRequire(import.meta.url)("../package.json") as {
   version: string;
@@ -26,11 +25,10 @@ export function buildProgram() {
     .version(`${version} (REST API v${API_VERSION})`, "-V, --version")
     .showHelpAfterError("(add --help for usage)")
     .addCommand(authCommand())
-    .addCommand(symbolsCommand())
     .addCommand(symbolCommand())
     .addCommand(indicatorCommand())
     .addCommand(histCommand())
-    .addCommand(positionsCommand())
+    .addCommand(positionCommand())
     .addCommand(budgetCommand())
     .addCommand(accountCommand())
     .addHelpText(
@@ -39,11 +37,11 @@ export function buildProgram() {
 Getting started:
   mt4-quote-bridge auth server        # set the server URL (prompts)
   mt4-quote-bridge auth login         # paste an API key from the dashboard
-  mt4-quote-bridge symbols list
+  mt4-quote-bridge symbol list
   mt4-quote-bridge symbol AUDUSD 1H 30
   mt4-quote-bridge indicator macd AUDUSD 1H 30
   mt4-quote-bridge hist AUDUSD 1H --start 20260901 --end 20261017 --csv
-  mt4-quote-bridge positions
+  mt4-quote-bridge position
   mt4-quote-bridge budget
 
 Every command and subcommand has detailed help:
