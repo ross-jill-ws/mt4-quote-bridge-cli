@@ -12,7 +12,10 @@ mt4-quote-bridge <command-main> [command-sub] [options]
 Command names are always singular (`symbol`, `position`, `indicator`, …).
 Every command and subcommand has detailed `--help`, written so that agent
 skills can rely on it: arguments, output columns, JSON shape, exit codes and
-examples.
+examples. The agent skill
+[`.agents/skills/mt4-quote-bridge-cli`](.agents/skills/mt4-quote-bridge-cli/SKILL.md)
+adds the workflow on top: sign-in checks, symbol lookup, which history
+command to use, and confirming orders with the user.
 
 ## Install
 
