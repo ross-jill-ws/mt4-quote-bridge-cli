@@ -1,6 +1,13 @@
+import { createWriteStream } from "node:fs";
+import { rename, rm } from "node:fs/promises";
+import { once } from "node:events";
+import { basename } from "node:path";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import { Command } from "commander";
-import { ApiClient } from "../client.js";
-import { emit, formatOf } from "../output.js";
+import { ApiClient, CliError, EXIT } from "../client.js";
+import { emit, formatOf, print } from "../output.js";
 import { formatTime, parseTime } from "../time.js";
 import {
   PERIOD_HELP,
@@ -17,6 +24,16 @@ type Series = {
   bars: number;
   from: number;
   to: number;
+};
+type HstFile = {
+  file: string;
+  symbol: string;
+  period: string;
+  timeframe: number;
+  digits: number;
+  bars: number;
+  from: number | null;
+  to: number | null;
 };
 type Bar = {
   time: number;
@@ -39,14 +56,149 @@ export function histCommand() {
 Subcommands / shorthand:
   hist list                                   symbols/periods with imported history
   hist <SYMBOL> <PERIOD> [--start D] [--end D] = hist bars ...
+  hist files                                  MT4 .hst files on the server
+  hist download <SYMBOL> <PERIOD>             save a .hst file's bars as CSV
 
-History is what was imported from MT4 .hst files on the dashboard (History
-import). It is not live. Import more on the dashboard; the CLI only reads.
+"list" and "bars" read history imported on the dashboard (Import & view).
+"files" and "download" read the MT4 .hst files directly: no import needed and
+every bar in the file, including older bars MT4 downloaded later.
 
 Examples:
   mt4-quote-bridge hist list
-  mt4-quote-bridge hist AUDUSD 1H --start 20260901 --end 20261017 --csv`
+  mt4-quote-bridge hist AUDUSD 1H --start 20260901 --end 20261017 --csv
+  mt4-quote-bridge hist download GOLD30 M30 --start 20260101`
     );
+
+  outputOptions(
+    hist
+      .command("files")
+      .description("show the MT4 .hst files on the server and their range")
+      .option("--symbol <symbol>", "only this symbol")
+      .option("--period <period>", "only this period, e.g. M30, 1H, D1")
+  )
+    .addHelpText(
+      "after",
+      `
+Columns: SYMBOL, PERIOD, BARS, FROM, TO (first/last bar, broker time), FILE
+(pass it as --file to "hist download" when several terminals have the symbol).
+To get more bars, raise Max bars in history in MT4 (Tools > Options > Charts)
+and scroll the chart back; the file grows as MT4 downloads older bars.
+${TIME_HELP}
+
+Examples:
+  mt4-quote-bridge hist files
+  mt4-quote-bridge hist files --symbol GOLD30 --json`
+    )
+    .action(async (o) => {
+      const data = await (
+        await ApiClient.fromProfile()
+      ).get<{ files: HstFile[] }>("/api/v1/history/files", {
+        symbol: o.symbol,
+        period: o.period,
+      });
+      emit(formatOf(o), data, data.files, [
+        { header: "SYMBOL", value: (f) => f.symbol },
+        { header: "PERIOD", value: (f) => f.period },
+        { header: "BARS", value: (f) => f.bars, align: "right" },
+        { header: "FROM", value: (f) => (f.from ? formatTime(f.from) : "") },
+        { header: "TO", value: (f) => (f.to ? formatTime(f.to) : "") },
+        { header: "FILE", value: (f) => f.file },
+      ]);
+    });
+
+  hist
+    .command("download")
+    .usage("<SYMBOL> <PERIOD> [--start DATE] [--end DATE] [-o FILE]")
+    .description("save the bars of an MT4 .hst file as CSV")
+    .argument("<symbol>", "symbol, e.g. GOLD30")
+    .argument("<period>", "period, e.g. M30, 1H, D1")
+    .option("--start <date>", "first bar time (default: start of the file)")
+    .option(
+      "--end <date>",
+      "last bar time (a date alone includes that whole day)"
+    )
+    .option(
+      "--file <file>",
+      'the .hst file (FILE column of "hist files") when several match'
+    )
+    .option(
+      "-o, --output <path>",
+      "where to save; - writes to stdout (default: server's file name, e.g. GOLD30_M30_20260817-20261019.csv)"
+    )
+    .addHelpText(
+      "after",
+      `
+Reads the .hst file on the server directly, so nothing has to be imported first
+and there is no row limit. Columns:
+  time,open,high,low,close,tick_volume,spread,real_volume
+Times are broker time ("YYYY-MM-DD HH:MM:SS"); prices use the symbol's digits.
+${TIME_HELP}
+
+Examples:
+  mt4-quote-bridge hist download GOLD30 M30
+  mt4-quote-bridge hist download GOLD30 M30 --start 20260901 --end 20261017 -o gold.csv
+  mt4-quote-bridge hist download EURUSD H1 -o - | head`
+    )
+    .action(async (symbol: string, period: string, o) => {
+      const client = await ApiClient.fromProfile();
+      const from = o.start ? parseTime(o.start) : 0;
+      const to = o.end ? parseTime(o.end, true) : 9999999999;
+      if (from > to) throw Error("--start must not be after --end");
+      const { files } = await client.get<{ files: HstFile[] }>(
+        "/api/v1/history/files",
+        { symbol, period }
+      );
+      const matches = o.file ? files.filter((f) => f.file === o.file) : files;
+      if (!matches.length)
+        throw new CliError(
+          o.file
+            ? `${o.file} is not a ${period} .hst file for ${symbol}. See "hist files".`
+            : `No ${period} .hst file for ${symbol} on the server. See "hist files".`
+        );
+      if (matches.length > 1)
+        throw new CliError(
+          `Several .hst files match ${symbol} ${matches[0].period}; pass --file.`,
+          EXIT.error,
+          matches.map((f) => f.file)
+        );
+      const response = await client.download("/api/v1/history/files/csv", {
+        file: matches[0].file,
+        from,
+        to,
+      });
+      const suggested = /filename="([^"]+)"/.exec(
+        response.headers.get("content-disposition") ?? ""
+      )?.[1];
+      const target: string = o.output ?? basename(suggested ?? "history.csv");
+      const body = Readable.fromWeb(response.body as WebReadableStream);
+      if (target === "-") {
+        for await (const chunk of body)
+          if (!process.stdout.write(chunk)) await once(process.stdout, "drain");
+        return;
+      }
+      // Write beside the target and rename, so a failed download leaves no partial CSV.
+      const partial = target + ".part";
+      let lines = 0;
+      try {
+        await pipeline(
+          body,
+          async function* (chunks: AsyncIterable<Buffer>) {
+            for await (const chunk of chunks) {
+              for (const byte of chunk) if (byte === 10) lines++;
+              yield chunk;
+            }
+          },
+          createWriteStream(partial)
+        );
+        await rename(partial, target);
+      } catch (e) {
+        await rm(partial, { force: true });
+        throw e;
+      }
+      print(
+        `Saved ${Math.max(0, lines - 1)} bars to ${target} (${matches[0].file})`
+      );
+    });
 
   outputOptions(
     hist

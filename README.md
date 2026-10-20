@@ -70,6 +70,8 @@ locally; revoke it in the dashboard to disable it everywhere.
 | `indicator macd AUDUSD 1H [30] [-p fast=8,slow=21]` | Last N values, calculated on the server |
 | `hist list` | Imported history: symbol, period, bar count, time range |
 | `hist AUDUSD 1H --start 20260901 --end 20261017 [--json\|--csv]` | Imported bars for a range (auto-paged) |
+| `hist files [--symbol S] [--period P]` | MT4 `.hst` files on the server (imported or not), bar count and range |
+| `hist download GOLD30 M30 [--start D] [--end D] [-o FILE\|-]` | Save a `.hst` file as CSV, read directly: no import, no row limit (`--file` when several terminals match) |
 | `position [list] [--pending\|--all] [--symbol S]` | Open positions (or pending orders) across online accounts, with net P/L and per-account totals |
 | `position <ticket>` | Every field of one position or pending order |
 | `budget [login]` | Balance, equity, floating P/L, used/free margin, margin level, trading permission |

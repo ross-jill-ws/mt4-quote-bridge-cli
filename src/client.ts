@@ -34,7 +34,12 @@ export class ApiClient {
   async request<T = any>(
     method: "GET" | "POST",
     path: string,
-    options: { query?: Query; body?: unknown; auth?: boolean } = {}
+    options: {
+      query?: Query;
+      body?: unknown;
+      auth?: boolean;
+      raw?: boolean;
+    } = {}
   ): Promise<T> {
     if (options.auth !== false && !this.token)
       throw new CliError(
@@ -44,7 +49,9 @@ export class ApiClient {
     const url = new URL(this.server + path);
     for (const [k, v] of Object.entries(options.query ?? {}))
       if (v !== undefined && v !== "") url.searchParams.set(k, String(v));
-    const headers: Record<string, string> = { accept: "application/json" };
+    const headers: Record<string, string> = {
+      accept: options.raw ? "text/csv, application/json" : "application/json",
+    };
     if (options.auth !== false && this.token)
       headers.authorization = `Bearer ${this.token}`;
     if (options.body !== undefined)
@@ -57,7 +64,8 @@ export class ApiClient {
         body:
           options.body === undefined ? undefined : JSON.stringify(options.body),
         redirect: "manual",
-        signal: AbortSignal.timeout(60000),
+        // The timeout also covers reading the body, so large downloads get longer.
+        signal: AbortSignal.timeout(options.raw ? 30 * 60000 : 60000),
       });
     } catch (e) {
       throw new CliError(
@@ -72,6 +80,8 @@ export class ApiClient {
         new URL(location, url).href
       );
     }
+    // Downloads hand back the unread body; their errors still arrive as JSON.
+    if (options.raw && response.ok) return response as T;
     let data: any;
     if (response.headers.get("content-type")?.includes("application/json"))
       try {
@@ -103,6 +113,10 @@ export class ApiClient {
   }
   post<T = any>(path: string, body: unknown) {
     return this.request<T>("POST", path, { body });
+  }
+  /** GET a streamed non-JSON body, such as a CSV file. */
+  download(path: string, query?: Query) {
+    return this.request<Response>("GET", path, { query, raw: true });
   }
 
   /** Verify the server speaks the same REST API version. */

@@ -306,3 +306,134 @@ test("auth login asks only for an API key, verifies it and saves it", async () =
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("hist download saves an .hst file's CSV and refuses ambiguous symbols", async () => {
+  const { spawn } = await import("node:child_process");
+  const { mkdtemp, readFile, readdir, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const key = "qbk_" + "cd".repeat(32);
+  const file = (id: string) => ({
+    file: id,
+    symbol: "GOLD30",
+    period: "M30",
+    timeframe: 30,
+    digits: 2,
+    bars: 2,
+    from: 1786973400,
+    to: 1787059800,
+  });
+  const body =
+    "time,open,high,low,close,tick_volume,spread,real_volume\n" +
+    "2026-08-17 13:30:00,4080.00,4085.00,4079.00,4082.50,100,0,0\n" +
+    "2026-08-18 13:30:00,4081.00,4086.00,4080.00,4083.50,100,0,0\n";
+  const seen: string[] = [];
+  const server = createServer((req, res) => {
+    const url = new URL(req.url!, "http://x");
+    seen.push(url.pathname + url.search);
+    if (req.headers.authorization !== `Bearer ${key}`) {
+      res.writeHead(401, { "content-type": "application/json" });
+      return res.end("{}");
+    }
+    if (url.pathname === "/api/v1/history/files") {
+      res.writeHead(200, { "content-type": "application/json" });
+      const ids =
+        url.searchParams.get("symbol") === "TWICE"
+          ? ["A/GOLD30.hst", "B/GOLD30.hst"]
+          : ["CMC-Demo/GOLD30.hst"];
+      return res.end(JSON.stringify({ files: ids.map(file) }));
+    }
+    if (url.pathname === "/api/v1/history/files/csv") {
+      res.writeHead(200, {
+        "content-type": "text/csv",
+        "content-disposition":
+          'attachment; filename="GOLD30_M30_20260817-20260818.csv"',
+      });
+      return res.end(body);
+    }
+    res.writeHead(404, { "content-type": "application/json" });
+    res.end('{"error":"nope"}');
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const dir = await mkdtemp(join(tmpdir(), "qb-cli-download-"));
+  const env = {
+    ...process.env,
+    MT4QB_CONFIG: join(dir, "config.json"),
+    MT4QB_SERVER: origin,
+    MT4QB_API_KEY: key,
+  };
+  const cli = (...args: string[]) =>
+    new Promise<{ code: number | null; out: string; err: string }>(
+      (resolve) => {
+        const child = spawn(
+          process.execPath,
+          // Runs in the temp dir (default save location), so resolve tsx here.
+          [
+            "--import",
+            import.meta.resolve("tsx"),
+            join(process.cwd(), "src/cli.ts"),
+            ...args,
+          ],
+          { env, cwd: dir }
+        );
+        let out = "",
+          err = "";
+        child.stdout.on("data", (b) => (out += b));
+        child.stderr.on("data", (b) => (err += b));
+        child.on("close", (code) => resolve({ code, out, err }));
+      }
+    );
+  try {
+    const saved = await cli(
+      "hist",
+      "download",
+      "gold30",
+      "30m",
+      "--start",
+      "20260817"
+    );
+    assert.equal(saved.code, 0, saved.err);
+    assert.match(
+      saved.out,
+      /Saved 2 bars to GOLD30_M30_20260817-20260818\.csv/
+    );
+    assert.equal(
+      await readFile(join(dir, "GOLD30_M30_20260817-20260818.csv"), "utf8"),
+      body
+    );
+    assert.ok(
+      seen.includes(
+        "/api/v1/history/files/csv?file=CMC-Demo%2FGOLD30.hst&from=1786924800&to=9999999999"
+      ),
+      seen.join("\n")
+    );
+    const piped = await cli("hist", "download", "GOLD30", "M30", "-o", "-");
+    assert.equal(piped.out, body);
+    const ambiguous = await cli("hist", "download", "TWICE", "M30");
+    assert.equal(ambiguous.code, 1);
+    assert.match(ambiguous.err, /Several \.hst files match.*--file/);
+    assert.match(ambiguous.err, /B\/GOLD30\.hst/);
+    const chosen = await cli(
+      "hist",
+      "download",
+      "TWICE",
+      "M30",
+      "--file",
+      "B/GOLD30.hst",
+      "-o",
+      "b.csv"
+    );
+    assert.equal(chosen.code, 0, chosen.err);
+    assert.deepEqual(
+      (await readdir(dir))
+        .filter((f) => f.endsWith(".csv") || f.endsWith(".part"))
+        .sort(),
+      ["GOLD30_M30_20260817-20260818.csv", "b.csv"]
+    );
+  } finally {
+    server.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});

@@ -19,7 +19,7 @@ export const SYMBOL_ACTIONS = [
   "sell-stop",
 ] as const;
 export const INDICATOR_ACTIONS = ["list", "info", "show"] as const;
-export const HIST_ACTIONS = ["list", "bars"] as const;
+export const HIST_ACTIONS = ["list", "bars", "files", "download"] as const;
 
 const option = (s: string | undefined) => s === undefined || s.startsWith("-");
 const helpFlag = (s: string | undefined) => s === "-h" || s === "--help";
