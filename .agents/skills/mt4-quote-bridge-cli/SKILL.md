@@ -1,56 +1,43 @@
 ---
 name: mt4-quote-bridge-cli
-description: Read MT4 market data and place demo orders with the `mt4-quote-bridge` CLI. Use when asked for MT4 quotes, candles, indicator values, price history or CSV exports, positions, balance or margin, or to buy or sell on a demo account.
+description: Read MetaTrader market and account data, and prepare demo trades, with the `mt4-quote-bridge` CLI for QuoteBridge. Use when asked for MT4 quotes, candles, indicator values, history exports, Funds, positions or pending orders, or to place, modify, close or cancel a demo trade.
 ---
 
 # mt4-quote-bridge CLI
 
-The CLI talks to a Quote Bridge server (REST API v1), which relays live data from MT4 terminals running the QuoteBridge EA. `--help` on every command and subcommand is the reference: arguments, output columns, JSON shape, exit codes and examples. Read a command's `--help` before its first use in a session; this skill covers what the help cannot.
+The CLI speaks QuoteBridge's REST API v1. Every command's `--help` is the reference for arguments, JSON shape and exit codes; read it before a command's first use in a session. This skill covers what the help cannot: the identity model and the trading protocol.
 
-If `mt4-quote-bridge` is not on PATH, run `node dist/cli.js` from this repository (after `npm run build`).
+If `mt4-quote-bridge` is not on PATH, run `node dist/cli.js` from this repository after `npm run build`.
 
 ## 1. Check the connection
 
-Run `mt4-quote-bridge auth status --json`. Exit `0` means signed in with a valid key; note `key.scope`.
+Run `mt4-quote-bridge auth status --json`. Exit `0` means signed in; note `key.scope` (`readonly` reads, `trader` may also preview, execute and review).
 
-Otherwise stop and hand over to the human:
+Otherwise hand over to the human: exit `3` means they create a key in the QuoteBridge app window (Settings › API keys) and run `auth login`; exit `1` means the app is unreachable, so confirm it is running and check `config show` with them. Keys, settings, demo-trading enablement and caps belong to the app window alone.
 
-- Exit `3` (no key, or invalid, expired or revoked): only the human can create a key, in the dashboard under user icon → **API keys**. Then they run `auth login`, which prompts for it.
-- Exit `1` (server unreachable): ask whether the server is running, and check the URL with them (`auth server`).
+## 2. Name things exactly
 
-A `read` (query only) key reads everything. Buying and selling needs a `trade` key.
+- A **market** is a broker server plus a symbol; an **account** is a broker server plus a login. Both are exact and case-sensitive.
+- Discover with `markets list --json` and `accounts list --json`, then pass what they return: `SYMBOL --broker <brokerServer>` or `--market-id`, and `--account <id>`.
+- Exit `6` lists the candidates in `error.details.candidates`. Ask the user which one they mean, then rerun with the exact identity. The account the user names is the account you use: every account-scoped command carries its own `--account`.
+- Pass `--json` whenever you parse output. Prices, lots and money are decimal strings; times are UTC with a `brokerTime` sibling.
 
-## 2. Find the exact symbol
+## 3. Trade only with explicit authorization
 
-Run `mt4-quote-bridge symbol list --json` first. Symbol names are the broker's own (`GOLD30`, `US500`), so map the user's wording to a listed name. The list also gives each symbol's **live periods** (served from an open MT4 chart) and **history periods** (imported). A symbol missing from the list has no MT4 chart with the QuoteBridge EA attached. Tell the user to open one.
+Trading is demo-only and always the user's decision. The agent prepares previews; the user approves each one.
 
-For contract details (lot min/step/max, contract size, margin, swaps, expiry), run `symbol <SYMBOL> info --json`. `spec: null` means the EA is older than 1.07; the user must recompile and re-attach it to get those fields.
+1. Act only when the user asks for a specific trade: account, market, side, size and stops come from them. Fill nothing in on their behalf.
+2. Preview with `--json` (`orders preview`, `orders modify|cancel`, `positions modify|close`). A preview sends nothing.
+3. Show the user the preview: account, normalized intent, limits, estimates and every warning (an outside trade, missing stops). It expires 30 seconds after `createdAt`.
+4. Run `requests execute <request-id> --confirm` only after the user explicitly approves that exact preview in this conversation. `--confirm` records their approval; it never replaces it. An expired or changed preview (exit `7`) needs a fresh preview and fresh approval.
+5. Read the exit status and report it:
+   - `0` succeeded: report the ticket.
+   - `11` failed: report MetaTrader's code and message.
+   - `12` sent, no result yet: check later with `requests show <request-id>`.
+   - `10` unknown: stop. Report it and ask the user to check MetaTrader's open orders and account history. The account stays blocked until a result arrives or the user reviews it.
 
-## 3. Read the data
+Every request ID is executed at most once. To learn what happened to one, read it with `requests show <request-id>`: a new preview or execute could open a second trade. A lost answer, a timeout and an unknown outcome are all answered by reading, never by sending again.
 
-- Pass `--json` whenever you parse the output; tables are for people.
-- Times are MT4 broker-server time, with no time-zone conversion, in both output and `--start` / `--end`. Convert only when the user asks, and say which zone you used.
-- When the same symbol comes from several terminals, the command fails with exit `1` and lists the candidates. Narrow it with the flag the error names (`--broker`, `--terminal`, `--feed`, `--history-source` or `--file`) and rerun.
+Review (`requests review <id> --note "…" --acknowledge`) records what the user found in MetaTrader. Run it only with the user's own note after they say they checked; it lifts the block and never resends.
 
-There are two kinds of history, and choosing between them is the usual branch:
-
-| Need | Command | Reads |
-| --- | --- | --- |
-| Bars already imported on the dashboard | `hist list`, `hist <SYMBOL> <PERIOD>` | the server database |
-| Everything MT4 has on disk, or a CSV file | `hist files`, `hist download <SYMBOL> <PERIOD>` | the `.hst` file directly; no import step, no row limit |
-
-When the history is shorter than the user needs, tell them: in MT4, raise **Max bars in history** (Tools → Options → Charts), then scroll the chart back so MT4 downloads older bars into the `.hst` file.
-
-## 4. Place an order (only when the user asks to trade)
-
-Orders are demo-account only, and every one needs the user's explicit go-ahead for that exact order.
-
-1. Run the order with `--dry-run --json`. Show the user the preview: symbol, side, lots, entry, SL/TP and account.
-2. Wait for the user to confirm that preview. Then rerun the same command with `--yes`. A preview expires after 30 seconds, so the confirmed run previews again.
-3. Read the exit code:
-   - `0`: executed. Report the ticket.
-   - `1`: rejected. Report the server's reason.
-   - `4`: nothing was sent.
-   - `5`: result unknown. Stop and report it. Check `position --all` and ask the user to look in MT4; a retry could open a second position.
-
-Modifying, closing and cancelling orders is dashboard-only. Point the user there.
+Real accounts are read-only: their exit `7` `executor-real-account` is final. Exit `4` `trading-disabled` means Demo trading is off in the app window's Settings, which only the user can switch on.
