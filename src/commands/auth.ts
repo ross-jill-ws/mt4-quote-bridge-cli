@@ -12,7 +12,8 @@ import {
 } from "../config.js";
 import { print } from "../output.js";
 import { ask, askHidden, interactive, readStdin } from "../prompt.js";
-const formatMillis = (ms: number) => new Date(ms).toISOString().replace("T", " ").slice(0, 19) + "Z";
+const formatMillis = (ms: number) =>
+  new Date(ms).toISOString().replace("T", " ").slice(0, 19) + "Z";
 
 export function authCommand() {
   const auth = new Command("auth")
@@ -81,8 +82,7 @@ Exit codes: 0 saved (or printed), 1 invalid URL / server unreachable or incompat
       const saved = await loadProfile();
       const current = normalizeServer(saved?.server ?? DEFAULT_SERVER);
       if (url === undefined && !interactive()) {
-        if (o.json)
-          print(JSON.stringify({ server: current, saved: !!saved }, null, 2));
+        if (o.json) print(envelope({ server: current, saved: !!saved }));
         else print(current);
         return;
       }
@@ -91,10 +91,7 @@ Exit codes: 0 saved (or printed), 1 invalid URL / server unreachable or incompat
         ? await ApiClient.verifyServer(entered)
         : { server: entered, upgraded: false };
       const { changed, droppedToken } = await saveServer(server);
-      if (o.json)
-        print(
-          JSON.stringify({ server, upgraded, changed, droppedToken }, null, 2)
-        );
+      if (o.json) print(envelope({ server, upgraded, changed, droppedToken }));
       else
         print(
           (upgraded ? `${entered} redirects to HTTPS; using it.\n` : "") +
@@ -146,7 +143,8 @@ Exit codes: 0 signed in, 1 error (unreachable, incompatible), 3 key rejected.`
     )
     .action(async (o) => {
       const saved = await loadProfile();
-      const configured = o.server ?? (process.env.MT4QB_SERVER || undefined) ?? saved?.server;
+      const configured =
+        o.server ?? (process.env.MT4QB_SERVER || undefined) ?? saved?.server;
       // First run: ask for the server instead of silently assuming localhost.
       const entered =
         configured === undefined && interactive()
@@ -183,17 +181,13 @@ Exit codes: 0 signed in, 1 error (unreachable, incompatible), 3 key rejected.`
       });
       if (o.json)
         print(
-          JSON.stringify(
-            {
-              server,
-              username: session.username,
-              key: session.key,
-              expires: session.expires,
-              config: configPath(),
-            },
-            null,
-            2
-          )
+          envelope({
+            server,
+            username: session.username,
+            key: session.key,
+            expires: session.expires,
+            config: configPath(),
+          })
         );
       else
         print(
@@ -234,11 +228,13 @@ revoked, 1 server unreachable.`
       const source = process.env.MT4QB_API_KEY ? "MT4QB_API_KEY" : configPath();
       if (o.json)
         print(
-          JSON.stringify(
-            { server, ...session, daysLeft, source, savedAt: profile?.savedAt },
-            null,
-            2
-          )
+          envelope({
+            server,
+            ...session,
+            daysLeft,
+            source,
+            savedAt: profile?.savedAt,
+          })
         );
       else
         print(
@@ -281,6 +277,9 @@ server URL is kept. The key itself stays valid; revoke it in the app window
     });
   return auth;
 }
+
+/** --json output in the same { data, meta } envelope as every other command. */
+const envelope = (data: unknown) => JSON.stringify({ data, meta: {} }, null, 2);
 
 export const isApiKey = (value: string) => /^qbk_[a-f0-9]{64}$/.test(value);
 

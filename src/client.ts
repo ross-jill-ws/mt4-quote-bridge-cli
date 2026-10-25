@@ -46,15 +46,19 @@ export class CliError extends Error {
   }
   /** The REST error envelope shape, also for errors the CLI raises itself. */
   envelope() {
-    return { error: { code: this.code, message: this.message, details: this.details } };
+    return {
+      error: { code: this.code, message: this.message, details: this.details },
+    };
   }
 }
 
-export const usage = (message: string, details: unknown = null) => new CliError(message, EXIT.usage, "usage", details);
+export const usage = (message: string, details: unknown = null) =>
+  new CliError(message, EXIT.usage, "usage", details);
 
 /** The exit status for an HTTP error status. */
 export function exitFor(status: number): number {
-  if (status === 400 || status === 405 || status === 413 || status === 415) return EXIT.usage;
+  if (status === 400 || status === 405 || status === 413 || status === 415)
+    return EXIT.usage;
   if (status === 401) return EXIT.auth;
   if (status === 403) return EXIT.forbidden;
   if (status === 404) return EXIT.notFound;
@@ -92,32 +96,59 @@ export class ApiClient {
   }
 
   /** Sends one request; resolves with the raw Response when ok and `raw`, else the parsed envelope. */
-  private async send(method: "GET" | "POST", path: string, options: { query?: Query; body?: unknown; auth?: boolean; raw?: boolean } = {}): Promise<any> {
+  private async send(
+    method: "GET" | "POST",
+    path: string,
+    options: {
+      query?: Query;
+      body?: unknown;
+      auth?: boolean;
+      raw?: boolean;
+    } = {}
+  ): Promise<any> {
     const auth = options.auth !== false;
-    if (auth && !this.token) throw new CliError(`Not signed in to ${this.server}. Run: mt4-quote-bridge auth login`, EXIT.auth, "not-signed-in");
+    if (auth && !this.token)
+      throw new CliError(
+        `Not signed in to ${this.server}. Run: mt4-quote-bridge auth login`,
+        EXIT.auth,
+        "not-signed-in"
+      );
     const url = new URL(this.server + path);
-    for (const [k, v] of Object.entries(options.query ?? {})) if (v !== undefined) url.searchParams.set(k, String(v));
+    for (const [k, v] of Object.entries(options.query ?? {}))
+      if (v !== undefined) url.searchParams.set(k, String(v));
     const headers: Record<string, string> = { accept: "application/json" };
     if (auth) headers.authorization = `Bearer ${this.token}`;
-    if (options.body !== undefined) headers["content-type"] = "application/json";
+    if (options.body !== undefined)
+      headers["content-type"] = "application/json";
     let response: Response;
     try {
       response = await fetch(url, {
         method,
         headers,
-        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        body:
+          options.body === undefined ? undefined : JSON.stringify(options.body),
         // The API key must only ever go to the configured server.
         redirect: "manual",
         // The timeout also covers reading the body, so exports get longer.
         signal: AbortSignal.timeout(options.raw ? 30 * 60000 : 60000),
       });
     } catch (e) {
-      const reason = e instanceof Error ? ((e.cause as Error | undefined)?.message ?? e.message) : String(e);
-      throw new CliError(`Cannot reach QuoteBridge at ${this.server} (${reason}). Is the app running? Check the server with: mt4-quote-bridge config show`, EXIT.error, "unreachable");
+      const reason =
+        e instanceof Error
+          ? ((e.cause as Error | undefined)?.message ?? e.message)
+          : String(e);
+      throw new CliError(
+        `Cannot reach QuoteBridge at ${this.server} (${reason}). Is the app running? Check the server with: mt4-quote-bridge config show`,
+        EXIT.error,
+        "unreachable"
+      );
     }
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location") ?? "";
-      throw new RedirectError(`${this.server} redirects to ${location || "another address"}. Set that address with: mt4-quote-bridge auth server <url>`, new URL(location, url).href);
+      throw new RedirectError(
+        `${this.server} redirects to ${location || "another address"}. Set that address with: mt4-quote-bridge auth server <url>`,
+        new URL(location, url).href
+      );
     }
     if (options.raw && response.ok) return response;
     let body: any;
@@ -125,16 +156,35 @@ export class ApiClient {
       try {
         body = await response.json();
       } catch {
-        throw new CliError(`Invalid JSON from ${path} (HTTP ${response.status}).`);
+        throw new CliError(
+          `Invalid JSON from ${path} (HTTP ${response.status}).`
+        );
       }
     }
-    if (response.ok && body && typeof body === "object" && "data" in body) return body;
+    if (response.ok && body && typeof body === "object" && "data" in body)
+      return body;
     const error = body?.error;
-    if (error && typeof error === "object" && typeof error.code === "string") throw new ApiError(response.status, error.code, String(error.message ?? ""), error.details ?? null);
+    if (error && typeof error === "object" && typeof error.code === "string")
+      throw new ApiError(
+        response.status,
+        error.code,
+        String(error.message ?? ""),
+        error.details ?? null
+      );
     // /api/auth/session answers outside the v1 envelope.
     if (response.ok && body !== undefined) return body;
-    if (response.status === 401) throw new ApiError(401, "unauthenticated", typeof error === "string" ? error : "The API key is missing, invalid or revoked.", null);
-    throw new CliError(`Unexpected answer from ${this.server}${path} (HTTP ${response.status}). Is this QuoteBridge with REST API v${API_VERSION}?`);
+    if (response.status === 401)
+      throw new ApiError(
+        401,
+        "unauthenticated",
+        typeof error === "string"
+          ? error
+          : "The API key is missing, invalid or revoked.",
+        null
+      );
+    throw new CliError(
+      `Unexpected answer from ${this.server}${path} (HTTP ${response.status}). Is this QuoteBridge with REST API v${API_VERSION}?`
+    );
   }
 
   get<T = any>(path: string, query?: Query): Promise<Envelope<T>> {
@@ -153,12 +203,19 @@ export class ApiClient {
   }
 
   /** Every item of a cursor-paged collection, following `meta.nextCursor` until it is null. */
-  async all<T = any>(path: string, query: Query = {}): Promise<{ data: T[]; pages: number }> {
+  async all<T = any>(
+    path: string,
+    query: Query = {}
+  ): Promise<{ data: T[]; pages: number }> {
     const data: T[] = [];
     let cursor: string | undefined;
     let pages = 0;
     do {
-      const page = await this.get<T[]>(path, { ...query, limit: query.limit ?? 500, cursor });
+      const page = await this.get<T[]>(path, {
+        ...query,
+        limit: query.limit ?? 500,
+        cursor,
+      });
       data.push(...page.data);
       pages++;
       cursor = page.meta.nextCursor ?? undefined;
@@ -172,11 +229,22 @@ export class ApiClient {
     try {
       info = await this.send("GET", "/api/v1/info", { auth: false });
     } catch (e) {
-      if (e instanceof RedirectError || (e instanceof CliError && e.code === "unreachable")) throw e;
-      throw new CliError(`${this.server} does not answer /api/v1/info. Is it QuoteBridge for MetaTrader with REST API v${API_VERSION}?`);
+      if (
+        e instanceof RedirectError ||
+        (e instanceof CliError && e.code === "unreachable")
+      )
+        throw e;
+      throw new CliError(
+        `${this.server} does not answer /api/v1/info. Is it QuoteBridge for MetaTrader with REST API v${API_VERSION}?`
+      );
     }
-    if (info.data?.service !== "mt4-quote-bridge" || info.data?.apiVersion !== API_VERSION) {
-      throw new CliError(`Incompatible server: expected mt4-quote-bridge API v${API_VERSION}, got ${info.data?.service ?? "unknown"} v${info.data?.apiVersion ?? "?"}. Update the CLI or the app.`);
+    if (
+      info.data?.service !== "mt4-quote-bridge" ||
+      info.data?.apiVersion !== API_VERSION
+    ) {
+      throw new CliError(
+        `Incompatible server: expected mt4-quote-bridge API v${API_VERSION}, got ${info.data?.service ?? "unknown"} v${info.data?.apiVersion ?? "?"}. Update the CLI or the app.`
+      );
     }
     return info.data;
   }
@@ -190,7 +258,12 @@ export class ApiClient {
       if (!(e instanceof RedirectError)) throw e;
       const from = new URL(server);
       const to = new URL(e.location);
-      if (from.protocol !== "http:" || to.protocol !== "https:" || to.hostname !== from.hostname) throw e;
+      if (
+        from.protocol !== "http:" ||
+        to.protocol !== "https:" ||
+        to.hostname !== from.hostname
+      )
+        throw e;
       const secure = normalizeServer(`https://${to.host}${from.pathname}`);
       await new ApiClient(secure).checkCompatible();
       return { server: secure, upgraded: true };
@@ -198,7 +271,11 @@ export class ApiClient {
   }
 }
 
-export type Session = { username: string; key: { name: string; prefix: string; scope: "readonly" | "trader" }; expires: number | null };
+export type Session = {
+  username: string;
+  key: { name: string; prefix: string; scope: "readonly" | "trader" };
+  expires: number | null;
+};
 
 export class RedirectError extends CliError {
   constructor(

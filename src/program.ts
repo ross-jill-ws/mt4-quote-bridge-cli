@@ -6,9 +6,16 @@ import { authCommand } from "./commands/auth.js";
 import { configCommand } from "./commands/config.js";
 import { indicatorsCommand, terminalsCommand } from "./commands/discovery.js";
 import { marketsCommand } from "./commands/markets.js";
-import { accountsCommand, ordersCommand, positionsCommand, requestsCommand } from "./commands/trading.js";
+import {
+  accountsCommand,
+  ordersCommand,
+  positionsCommand,
+  requestsCommand,
+} from "./commands/trading.js";
 
-const { version } = createRequire(import.meta.url)("../package.json") as { version: string };
+const { version } = createRequire(import.meta.url)("../package.json") as {
+  version: string;
+};
 
 export const EXIT_HELP = `Exit codes:
   0  success                     7  conflict: cross-broker market, preview
@@ -25,7 +32,9 @@ export const EXIT_HELP = `Exit codes:
 export function buildProgram(json = false) {
   const program = new Command("mt4-quote-bridge")
     .usage("<command> <subcommand> [options]")
-    .description("Command-line client for QuoteBridge for MetaTrader (REST API v1): markets, accounts, positions,\npending orders, trading requests, indicators and terminals.")
+    .description(
+      "Command-line client for QuoteBridge for MetaTrader (REST API v1): markets, accounts, positions,\npending orders, trading requests, indicators and terminals."
+    )
     .version(`${version} (REST API v${API_VERSION})`, "-V, --version")
     .showHelpAfterError("(add --help for usage)")
     .addCommand(marketsCommand())
@@ -66,7 +75,12 @@ ${EXIT_HELP}`
     );
   // Usage errors exit 2, not commander's 1, and keep stdout clean.
   const strict = (cmd: Command) => {
-    cmd.exitOverride().configureOutput({ writeOut: (s) => process.stdout.write(s), writeErr: (s) => void (json || process.stderr.write(s)) });
+    cmd
+      .exitOverride()
+      .configureOutput({
+        writeOut: (s) => process.stdout.write(s),
+        writeErr: (s) => void (json || process.stderr.write(s)),
+      });
     cmd.commands.forEach(strict);
   };
   strict(program);
@@ -79,20 +93,40 @@ export async function main(args: string[]) {
     await buildProgram(json).parseAsync(args, { from: "user" });
   } catch (e) {
     if (e instanceof CommanderError) {
-      // Help and version are not errors.
-      if (e.code === "commander.helpDisplayed" || e.code === "commander.version" || e.code === "commander.help") return;
-      if (json) process.stderr.write(JSON.stringify(new CliError(e.message.replace(/^error: /, ""), EXIT.usage, "usage").envelope()) + "\n");
+      // Asked-for help and the version are not errors; help shown for a missing subcommand is a usage error.
+      if (e.exitCode === 0) return;
+      if (e.code === "commander.help") {
+        process.exitCode = EXIT.usage;
+        return;
+      }
+      if (json)
+        process.stderr.write(
+          JSON.stringify(
+            new CliError(
+              e.message.replace(/^error: /, ""),
+              EXIT.usage,
+              "usage"
+            ).envelope()
+          ) + "\n"
+        );
       process.exitCode = EXIT.usage;
       return;
     }
-    const error = e instanceof CliError ? e : new CliError(e instanceof Error ? e.message : String(e));
+    const error =
+      e instanceof CliError
+        ? e
+        : new CliError(e instanceof Error ? e.message : String(e));
     if (json) process.stderr.write(JSON.stringify(error.envelope()) + "\n");
     else {
-      process.stderr.write(`error: ${error.message}${error.code !== "cli-error" && error.code !== "usage" ? ` (${error.code})` : ""}\n`);
-      const candidates = (error.details as { candidates?: Record<string, unknown>[] } | null)?.candidates;
-      for (const c of candidates ?? []) process.stderr.write(`  - ${Object.values(c).join("  ")}\n`);
+      process.stderr.write(
+        `error: ${error.message}${error.code !== "cli-error" && error.code !== "usage" ? ` (${error.code})` : ""}\n`
+      );
+      const candidates = (
+        error.details as { candidates?: Record<string, unknown>[] } | null
+      )?.candidates;
+      for (const c of candidates ?? [])
+        process.stderr.write(`  - ${Object.values(c).join("  ")}\n`);
     }
     process.exitCode = error.exitCode;
   }
 }
-
