@@ -950,23 +950,22 @@ test(
           [repeat.code, repeat.json?.data.status],
           [10, "unknown"]
         );
-        const blocked = await ok([
-          "orders",
-          "preview",
-          "--account",
-          mainId,
-          "--symbol",
-          "EURUSD",
-          "--side",
-          "buy",
-          "--type",
-          "market",
-          "--lots",
-          "0.05",
-          "--json",
-        ]);
+        // The blocked account cannot even preview, so no execute command is offered for it.
         await fails(
-          ["requests", "execute", blocked.json.data.requestId, "--confirm"],
+          [
+            "orders",
+            "preview",
+            "--account",
+            mainId,
+            "--symbol",
+            "EURUSD",
+            "--side",
+            "buy",
+            "--type",
+            "market",
+            "--lots",
+            "0.05",
+          ],
           7,
           "account-unresolved"
         );

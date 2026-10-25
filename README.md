@@ -69,8 +69,8 @@ mt4-quote-bridge requests show <request-id>
 - **Previews, then one execute.** `orders preview|modify|cancel` and `positions modify|close` only preview (valid 30
   seconds). `requests execute <id> --confirm` is the only command that sends anything: it posts once, then only reads
   the request until a definitive result (`--wait`, 25 s by default). It never retries; to find out what happened, run
-  `requests show`. An unknown outcome blocks its account until a result arrives or you `requests review` it after
-  checking MetaTrader.
+  `requests show`. An unknown outcome blocks its account, previews included, until a result arrives or you
+  `requests review` it after checking MetaTrader.
 - **Output.** Tables for people; `--json` prints the REST envelope (`{ data, meta }`) on stdout. Errors and hints go to
   stderr; with `--json`, an error is `{ error: { code, message, details } }` on stderr.
 - **Paging.** Collections take `--limit`, `--cursor` (the previous page's `meta.nextCursor`) or `--all`. Candles and
