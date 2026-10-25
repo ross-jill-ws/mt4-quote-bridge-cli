@@ -1,7 +1,7 @@
 {
   "name": "mt4-quote-bridge-cli",
-  "version": "0.1.0",
-  "description": "Command-line client for the MT4 Quote Bridge server REST API (quotes, candles, indicators, history, demo orders)",
+  "version": "0.2.0",
+  "description": "Command-line client for QuoteBridge for MetaTrader REST API v1: markets, accounts, positions, pending orders, trading requests, indicators and terminals",
   "type": "module",
   "bin": {
     "mt4-quote-bridge": "dist/cli.js"

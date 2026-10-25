@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { ApiClient, CliError, EXIT } from "../client.js";
+import { ApiClient, CliError, EXIT, type Session } from "../client.js";
 import {
   clearToken,
   configPath,
@@ -12,29 +12,30 @@ import {
 } from "../config.js";
 import { print } from "../output.js";
 import { ask, askHidden, interactive, readStdin } from "../prompt.js";
-import { formatMillis } from "../time.js";
+const formatMillis = (ms: number) => new Date(ms).toISOString().replace("T", " ").slice(0, 19) + "Z";
 
 export function authCommand() {
   const auth = new Command("auth")
-    .description("sign in to a Quote Bridge server with an API key")
+    .description("sign in to QuoteBridge with an API key")
     .addHelpText(
       "after",
       `
 Subcommands:
-  server   set the Quote Bridge server URL (prompts; default ${DEFAULT_SERVER})
-  login    save an API key created in the dashboard (prompts for the key)
+  server   set the QuoteBridge server URL (prompts; default ${DEFAULT_SERVER})
+  login    save an API key created in the app window (prompts for the key)
   status   show the saved server, key name, scope and expiry (verifies with server)
   logout   delete the saved API key locally
 
 Typical first run:
-  1. In the dashboard: user icon (top right) -> API keys -> Create key.
-     Scope "Query only" reads data; "Query + buy/sell" can also place orders.
-  2. mt4-quote-bridge auth server     # enter the server URL
+  1. In the QuoteBridge app window: Settings › API keys › create a key.
+     Scope "readonly" reads everything; "trader" can also preview, execute
+     and review trading requests. Keys are managed in the app window only.
+  2. mt4-quote-bridge auth server     # enter the server URL (default ${DEFAULT_SERVER})
   3. mt4-quote-bridge auth login      # paste the API key
 
 The server URL and API key are saved in ${configPath()}
 (override with MT4QB_CONFIG). Keys never expire unless an expiry was chosen
-when creating them; revoke them in the dashboard.
+when creating them; revoke them in the app window (Settings › API keys).
 Environment overrides: MT4QB_SERVER (server URL), MT4QB_API_KEY (API key).`
     );
 
@@ -42,9 +43,9 @@ Environment overrides: MT4QB_SERVER (server URL), MT4QB_API_KEY (API key).`
     .command("server")
     .usage("[URL] [options]")
     .description(
-      `set the Quote Bridge server URL (prompts when URL is omitted; default ${DEFAULT_SERVER})`
+      `set the QuoteBridge server URL (prompts when URL is omitted; default ${DEFAULT_SERVER})`
     )
-    .argument("[url]", "server URL, e.g. http://192.168.1.20:3000")
+    .argument("[url]", "server URL, e.g. http://127.0.0.1:5580")
     .option("--no-check", "save without checking that the server is reachable")
     .option("--json", "print the result as JSON")
     .addHelpText(
@@ -57,7 +58,7 @@ Press Enter to keep it. Without URL and without a terminal (scripts), prints
 the current server and changes nothing.
 
 "host:port" is accepted (http:// is assumed). Before saving, the CLI checks
-that the URL is a compatible Quote Bridge server (GET /api/v1/info) unless
+that the URL is a compatible QuoteBridge server (GET /api/v1/info) unless
 --no-check is given. If an http:// URL redirects to https:// on the same host
 (ngrok and most HTTPS proxies do this), the https:// URL is saved instead.
 Other redirects are refused, so the API key is never sent to a different host.
@@ -68,8 +69,11 @@ MT4QB_SERVER, when set, overrides the saved server for every command.
 
 Examples:
   mt4-quote-bridge auth server
-  mt4-quote-bridge auth server http://192.168.1.20:3000
-  mt4-quote-bridge auth server qb.example.com:3000 --no-check
+  mt4-quote-bridge auth server http://127.0.0.1:5580
+  mt4-quote-bridge auth server 127.0.0.1:5581 --no-check
+
+The app answers on 127.0.0.1 only, on the HTTP port shown in its Settings ›
+Connection (5580 by default). Use 127.0.0.1, not localhost.
 
 Exit codes: 0 saved (or printed), 1 invalid URL / server unreachable or incompatible.`
     )
@@ -105,10 +109,10 @@ Exit codes: 0 saved (or printed), 1 invalid URL / server unreachable or incompat
 
   auth
     .command("login")
-    .description("sign in with an API key from the dashboard and save it")
+    .description("sign in with an API key from the app window and save it")
     .option(
       "-s, --server <url>",
-      `Quote Bridge server URL (default: saved server, MT4QB_SERVER or ${DEFAULT_SERVER})`
+      `QuoteBridge server URL (default: saved server, MT4QB_SERVER or ${DEFAULT_SERVER})`
     )
     .option(
       "--api-key-stdin",
@@ -121,11 +125,12 @@ Exit codes: 0 saved (or printed), 1 invalid URL / server unreachable or incompat
 Server: --server, else MT4QB_SERVER, else the saved server ("auth server").
 When none is set, login prompts for it (default ${DEFAULT_SERVER}).
 
-Prompts for an API key (input hidden). Create one in the dashboard: user icon
-(top right) -> API keys -> Create key. The key looks like qbk_<64 hex> and is
-shown only once. Its scope decides what the CLI may do:
-  Query only        symbols, candles, indicators, history, positions, budget
-  Query + buy/sell  also "symbol buy/sell" (demo orders)
+Prompts for an API key (input hidden). Create one in the app window: Settings ›
+API keys. The key looks like qbk_<64 hex> and is shown only once. Its scope
+decides what the CLI may do:
+  readonly  every read: markets, accounts, Funds, positions, orders, requests,
+            indicators, terminals
+  trader    also previews, requests execute and requests review (demo only)
 
 The key is checked with the server (GET /api/auth/session) and saved to
 ${configPath()}
@@ -134,14 +139,14 @@ a compatible REST API version (GET /api/v1/info).
 
 Examples:
   mt4-quote-bridge auth login
-  mt4-quote-bridge auth login --server http://localhost:3000
-  echo "$QB_API_KEY" | mt4-quote-bridge auth login -s http://10.0.0.5:3000 --api-key-stdin
+  mt4-quote-bridge auth login --server http://127.0.0.1:5580
+  echo "$QB_API_KEY" | mt4-quote-bridge auth login -s http://127.0.0.1:5580 --api-key-stdin
 
 Exit codes: 0 signed in, 1 error (unreachable, incompatible), 3 key rejected.`
     )
     .action(async (o) => {
       const saved = await loadProfile();
-      const configured = o.server ?? process.env.MT4QB_SERVER ?? saved?.server;
+      const configured = o.server ?? (process.env.MT4QB_SERVER || undefined) ?? saved?.server;
       // First run: ask for the server instead of silently assuming localhost.
       const entered =
         configured === undefined && interactive()
@@ -162,12 +167,11 @@ Exit codes: 0 signed in, 1 error (unreachable, incompatible), 3 key rejected.`
       key = key.trim();
       if (!isApiKey(key))
         throw new CliError(
-          "That is not a Quote Bridge API key (expected qbk_ followed by 64 hex characters). Create one in the dashboard: user icon -> API keys.",
-          EXIT.auth
+          "That is not a QuoteBridge API key (expected qbk_ followed by 64 hex characters). Create one in the app window: Settings › API keys.",
+          EXIT.auth,
+          "invalid-key"
         );
-      const session = await new ApiClient(server, key).get<Session>(
-        "/api/auth/session"
-      );
+      const session = await new ApiClient(server, key).session();
       await saveProfile({
         server,
         username: session.username,
@@ -217,20 +221,17 @@ revoked, 1 server unreachable.`
       if (!token)
         throw new CliError(
           `Not signed in to ${server}. Run: mt4-quote-bridge auth login`,
-          EXIT.auth
+          EXIT.auth,
+          "not-signed-in"
         );
       const client = new ApiClient(server, token);
       await client.checkCompatible();
-      const session = await client.get<Session>("/api/auth/session");
+      const session = await client.session();
       const daysLeft =
         session.expires === null
           ? null
           : (session.expires - Date.now()) / 86400000;
-      const source = process.env.MT4QB_API_KEY
-        ? "MT4QB_API_KEY"
-        : process.env.MT4QB_TOKEN
-          ? "MT4QB_TOKEN"
-          : configPath();
+      const source = process.env.MT4QB_API_KEY ? "MT4QB_API_KEY" : configPath();
       if (o.json)
         print(
           JSON.stringify(
@@ -254,7 +255,7 @@ revoked, 1 server unreachable.`
             `Source:   ${source}`,
             ...(daysLeft !== null && daysLeft < 7
               ? [
-                  "Warning:  key expires within a week; create a new one in the dashboard and run auth login.",
+                  "Warning:  key expires within a week; create a new one in the app window and run auth login.",
                 ]
               : []),
           ].join("\n")
@@ -268,29 +269,23 @@ revoked, 1 server unreachable.`
       "after",
       `
 Removes the API key from ${configPath()}. The saved
-server URL is kept. The key itself stays valid on the server; revoke it in the
-dashboard (user icon -> API keys) if it should stop working everywhere.`
+server URL is kept. The key itself stays valid; revoke it in the app window
+(Settings › API keys) if it should stop working everywhere.`
     )
     .action(async () => {
       const { server } = await connection();
       await clearToken();
       print(
-        `Removed the saved API key for ${server}. To disable the key itself, revoke it in the dashboard (user icon -> API keys).`
+        `Removed the saved API key for ${server}. To disable the key itself, revoke it in the app window (Settings › API keys).`
       );
     });
   return auth;
 }
 
-type Session = {
-  username: string;
-  key: { name: string; prefix: string; scope: "read" | "trade" };
-  expires: number | null;
-};
-
 export const isApiKey = (value: string) => /^qbk_[a-f0-9]{64}$/.test(value);
 
 const scopeLabel = (scope: string) =>
-  scope === "trade" ? "query + buy/sell" : "query only";
+  scope === "trader" ? "trader: reads, previews, execute, review" : "readonly";
 
 const expiryText = (expires: number | null) =>
   expires === null

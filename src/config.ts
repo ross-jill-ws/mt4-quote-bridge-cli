@@ -10,17 +10,18 @@ export type Profile = {
   token?: string;
   /** Dashboard name and scope of the saved API key. */
   keyName?: string;
-  scope?: "read" | "trade";
+  scope?: "readonly" | "trader";
   /** Epoch milliseconds; null when the key never expires. */
   expires?: number | null;
   savedAt: number;
 };
 
-export const DEFAULT_SERVER = "http://localhost:3000";
+/** The app answers on 127.0.0.1 only; 5580 is its default HTTP port (Settings › Connection). */
+export const DEFAULT_SERVER = "http://127.0.0.1:5580";
 
 export function configPath() {
   return (
-    process.env.MT4QB_CONFIG ??
+    (process.env.MT4QB_CONFIG || undefined) ??
     join(homedir(), ".mt4-quote-bridge", "config.json")
   );
 }
@@ -72,12 +73,10 @@ export async function clearToken() {
 export async function connection() {
   const profile = await loadProfile();
   const server = normalizeServer(
-    process.env.MT4QB_SERVER ?? profile?.server ?? DEFAULT_SERVER
+    (process.env.MT4QB_SERVER || undefined) ?? profile?.server ?? DEFAULT_SERVER
   );
-  // MT4QB_TOKEN is the pre-API-key name, still honoured.
   const token =
-    process.env.MT4QB_API_KEY ??
-    process.env.MT4QB_TOKEN ??
+    (process.env.MT4QB_API_KEY || undefined) ??
     (profile && normalizeServer(profile.server) === server
       ? profile.token
       : undefined);
