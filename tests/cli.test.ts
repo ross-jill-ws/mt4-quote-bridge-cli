@@ -448,6 +448,192 @@ test("mutations need explicit accounts and confirmation: refused arguments send 
   }
 });
 
+test("successful mutation commands only preview: one POST, to /requests/preview, and otherwise only reads", async () => {
+  const id = "fedcba9876543210fedcba9876543210";
+  const server = await stub((req, body, send) => {
+    if (req.method === "POST" && req.url === "/api/v1/requests/preview") {
+      const intent = JSON.parse(body);
+      return send(201, {
+        data: {
+          requestId: id,
+          status: "preview",
+          reviewed: false,
+          accountId: intent.accountId,
+          expiresAt: "2027-01-15T08:00:30Z",
+          normalizedIntent: { symbol: "EURUSD", ...intent },
+          limits: null,
+          warnings: [],
+        },
+        meta: {},
+      });
+    }
+    directory(req, body, send);
+  });
+  const { run, cleanup } = await runner(server.origin);
+  try {
+    const cases: [string[], Record<string, unknown>][] = [
+      [
+        [
+          "orders",
+          "preview",
+          "--account",
+          "a-demo",
+          "--symbol",
+          "EURUSD",
+          "--side",
+          "buy",
+          "--type",
+          "market",
+          "--lots",
+          "0.10",
+        ],
+        {
+          accountId: "a-demo",
+          action: "place",
+          marketId: "m-demo",
+          side: "buy",
+          type: "market",
+          lots: "0.10",
+        },
+      ],
+      [
+        ["positions", "modify", "123", "--account", "a-demo", "--sl", "none"],
+        {
+          accountId: "a-demo",
+          action: "modify",
+          ticket: "123",
+          stopLoss: null,
+        },
+      ],
+      [
+        ["positions", "close", "123", "--account", "a-demo"],
+        { accountId: "a-demo", action: "close", ticket: "123" },
+      ],
+      [
+        ["orders", "modify", "456", "--account", "a-demo", "--price", "1.262"],
+        {
+          accountId: "a-demo",
+          action: "modify",
+          ticket: "456",
+          price: "1.262",
+        },
+      ],
+      [
+        ["orders", "cancel", "456", "--account", "a-demo"],
+        { accountId: "a-demo", action: "cancel", ticket: "456" },
+      ],
+    ];
+    for (const [args, intent] of cases) {
+      for (const json of [true, false]) {
+        const from = server.seen.length;
+        const r = await run(json ? [...args, "--json"] : args);
+        const label = `${args.slice(0, 2).join(" ")}${json ? " --json" : ""}`;
+        assert.equal(r.code, 0, `${label}: ${r.err}`);
+        const seen = server.seen.slice(from);
+        const posts = seen.filter((s) => !s.startsWith("GET "));
+        assert.equal(
+          posts.length,
+          1,
+          `${label} posted once: ${seen.join("; ")}`
+        );
+        assert.ok(
+          posts[0].startsWith("POST /api/v1/requests/preview "),
+          `${label} only previews: ${posts[0]}`
+        );
+        assert.deepEqual(
+          JSON.parse(posts[0].slice("POST /api/v1/requests/preview ".length)),
+          intent,
+          label
+        );
+        if (json) {
+          assert.equal(JSON.parse(r.out).data.status, "preview", label);
+          assert.equal(r.err, "", `${label} wrote to stderr`);
+        } else assert.match(r.err, /Nothing was sent/, label);
+      }
+    }
+    assert.ok(
+      !server.seen.some((s) => /\/execute|\/review/.test(s)),
+      "nothing was executed or reviewed"
+    );
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
+/** A server that receives the execute POST, then drops the connection before answering: it may have been sent. */
+const losesExecuteAnswer = () =>
+  stub((req, _body, send) => {
+    if (req.method === "POST") return req.socket.destroy();
+    send(404, {
+      error: {
+        code: "unknown-route",
+        message: "No such route.",
+        details: null,
+      },
+    });
+  });
+
+test("a lost execute answer is never retried: one POST, a warning to check with requests show, exit 1", async () => {
+  const id = "0123456789abcdef0123456789abcdef";
+  const server = await losesExecuteAnswer();
+  const { run, cleanup } = await runner(server.origin);
+  try {
+    const r = await run(["requests", "execute", id, "--confirm"]);
+    assert.equal(
+      r.code,
+      EXIT.error,
+      `docs/cli.md: 1 is "the app is unreachable": ${r.err}`
+    );
+    assert.equal(r.out, "");
+    assert.match(r.err, /may have been sent/);
+    assert.match(r.err, /Do not execute again/);
+    assert.match(
+      r.err,
+      new RegExp(`mt4-quote-bridge requests show ${id}`),
+      "points at requests show for the same ID"
+    );
+    assert.deepEqual(
+      server.seen,
+      [`POST /api/v1/requests/${id}/execute {"confirm":true}`],
+      "posted exactly once and nothing else, never retried"
+    );
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
+test("a lost execute answer with --json: stderr is one error envelope that still carries the warning", async () => {
+  const id = "0123456789abcdef0123456789abcdef";
+  const server = await losesExecuteAnswer();
+  const { run, cleanup } = await runner(server.origin);
+  try {
+    const json = await run(["requests", "execute", id, "--confirm", "--json"]);
+    assert.equal(json.code, EXIT.error);
+    assert.equal(json.out, "");
+    assert.deepEqual(
+      server.seen,
+      [`POST /api/v1/requests/${id}/execute {"confirm":true}`],
+      "posted exactly once, never retried"
+    );
+    let envelope: any;
+    assert.doesNotThrow(
+      () => (envelope = JSON.parse(json.err)),
+      `with --json, stderr is one JSON error envelope; got: ${json.err}`
+    );
+    assert.equal(envelope.error.code, "unreachable");
+    assert.match(
+      JSON.stringify(envelope.error),
+      new RegExp(`requests show ${id}`),
+      "the may-have-been-sent warning reaches --json readers"
+    );
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
 test("execute posts once, then only reads the request; unknown exits 10 with review guidance", async () => {
   const id = "0123456789abcdef0123456789abcdef";
   let reads = 0;

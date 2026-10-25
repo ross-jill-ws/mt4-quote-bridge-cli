@@ -1,7 +1,14 @@
 // Accounts, positions, pending orders and trading requests. Every mutation command only previews; the one command
 // that sends anything is `requests execute <id> --confirm`, and nothing is ever retried.
 import { Command, Option } from "commander";
-import { ApiClient, ApiError, EXIT, usage, type Envelope } from "../client.js";
+import {
+  ApiClient,
+  ApiError,
+  CliError,
+  EXIT,
+  usage,
+  type Envelope,
+} from "../client.js";
 import { emit, fields, note, table } from "../output.js";
 import { resolveAccount, resolveMarket, type Account } from "../resolve.js";
 import {
@@ -704,7 +711,8 @@ A lost answer is recovered with: mt4-quote-bridge requests show <request-id>
 
 Exit status: 0 succeeded; 10 unknown (check MetaTrader, then review; never
 retry); 11 failed (refused); 12 sent but no definitive result yet; 7 the
-preview expired or no longer holds (preview again).`
+preview expired or no longer holds (preview again); 1 the answer was lost (it
+may have been sent: requests show, never execute again).`
       )
       .action(async (id: string, o) => {
         requestIdArg(id);
@@ -720,11 +728,13 @@ preview expired or no longer holds (preview again).`
           });
         } catch (e) {
           // Without the server's answer the request may still have been sent: read it, never execute again.
-          if (!(e instanceof ApiError))
-            note(
-              `The answer was lost; the request may have been sent. Do not execute again. Check with:\n  mt4-quote-bridge requests show ${id}`
-            );
-          throw e;
+          // One error carries the warning, so --json readers get it in the envelope too.
+          if (e instanceof ApiError) throw e;
+          throw new CliError(
+            `The answer was lost; the request may have been sent. Do not execute again. Check with:\n  mt4-quote-bridge requests show ${id}`,
+            EXIT.error,
+            e instanceof CliError ? e.code : "cli-error"
+          );
         }
         let envelope = sent;
         const deadline = Date.now() + (o.wait ?? 25) * 1000;

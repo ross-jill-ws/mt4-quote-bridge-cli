@@ -84,12 +84,28 @@ test(
         ticketBase
       );
       let ea: any;
+      /** When set, the next execution (X) is refused as the broker would, instead of reaching FakeAccount. */
+      const refusal: { next?: { code: number; text: string } } = {};
       ea = await app.connect({
         terminal,
         broker,
         symbol: "EURUSD",
         bars: () => "loading",
-        commands: (m: string) => account.handle(ea, m),
+        commands: (m: string) => {
+          const refuse = refusal.next;
+          if (!refuse || !m.startsWith("X|")) return account.handle(ea, m);
+          refusal.next = undefined;
+          const [, , , request, login] = m.split("|");
+          setTimeout(
+            () =>
+              void ea
+                .send(
+                  `X|1|${ea.session}|${request}|${login}|rejected|0|${refuse.code}|${refuse.text}`
+                )
+                .catch(() => {}),
+            100
+          );
+        },
       });
       const announce = async () => {
         await ea.send(ea.helloWire());
@@ -99,7 +115,7 @@ test(
       await app.quote(ea, [
         { seq: 1, bid: 1.1, ask: 1.10012, quoteTime: brokerNow() },
       ]);
-      return { ea, account, announce };
+      return { ea, account, announce, refusal };
     };
     const main = await chart(
       TERMINAL,
@@ -215,6 +231,8 @@ test(
     ).id;
     const secondId = accounts.find((a) => a.login === SECOND_LOGIN).id;
     const realId = accounts.find((a) => a.brokerServer === REAL).id;
+    /** Every request the subtests executed (dispatched), so the journal can be checked exactly. */
+    const executedIds: string[] = [];
 
     await t.test(
       "read families: markets, accounts, positions, orders, indicators, terminals",
@@ -564,6 +582,7 @@ test(
           "--confirm",
           "--json",
         ]);
+        executedIds.push(p.requestId);
         assert.equal(executed.json.data.status, "succeeded");
         assert.ok(executed.json.data.result.ticket);
         const again = await ok([
@@ -687,11 +706,72 @@ test(
     );
 
     await t.test(
+      "a request MetaTrader refuses fails definitively: exit 11, the broker's code kept, nothing changed",
+      async () => {
+        const before = (
+          await ok(["positions", "list", "--account", secondId, "--json"])
+        ).json.data;
+        const preview = await ok([
+          "orders",
+          "preview",
+          "--account",
+          secondId,
+          "--symbol",
+          "EURUSD",
+          "--side",
+          "buy",
+          "--type",
+          "market",
+          "--lots",
+          "0.05",
+          "--json",
+        ]);
+        const id = preview.json.data.requestId;
+        second.refusal.next = { code: 134, text: "Not enough money" };
+        const refused = await cli([
+          "requests",
+          "execute",
+          id,
+          "--confirm",
+          "--json",
+        ]);
+        executedIds.push(id);
+        assert.equal(refused.code, 11, refused.err);
+        assert.equal(refused.err, "", "with --json, stderr stays empty");
+        assert.equal(refused.json.data.status, "failed");
+        assert.deepEqual(
+          [refused.json.data.result.code, refused.json.data.result.message],
+          [134, "Not enough money"],
+          "the broker's code and message are kept"
+        );
+        const human = await cli(["requests", "show", id]);
+        assert.equal(human.code, 11);
+        assert.match(human.err, /MetaTrader refused it; nothing was changed/);
+        assert.deepEqual(
+          (await ok(["positions", "list", "--account", secondId, "--json"]))
+            .json.data,
+          before,
+          "a refused order opens nothing"
+        );
+      }
+    );
+
+    await t.test(
       "modify, close and cancel previews are account-qualified; pending orders take a risk plan",
       async () => {
-        const [position] = (
-          await ok(["positions", "list", "--account", mainId, "--json"])
-        ).json.data;
+        /** The account's trades and the journal, to show that previews change nothing. */
+        const state = async () => ({
+          positions: (
+            await ok(["positions", "list", "--account", mainId, "--json"])
+          ).json.data,
+          orders: (await ok(["orders", "list", "--account", mainId, "--json"]))
+            .json.data,
+          journal: (
+            await ok(["requests", "list", "--all", "--json"])
+          ).json.data.map((r: any) => r.requestId),
+        });
+        const unchanged = await state();
+        const [position] = unchanged.positions;
         const modify = await ok([
           "positions",
           "modify",
@@ -807,6 +887,11 @@ test(
           2,
           "usage"
         );
+        assert.deepEqual(
+          await state(),
+          unchanged,
+          "modify, close, cancel and place previews sent nothing: trades and journal are as they were"
+        );
       }
     );
 
@@ -829,6 +914,7 @@ test(
           "--json",
         ]);
         const id = preview.json.data.requestId;
+        executedIds.push(id);
         const sent = await cli([
           "requests",
           "execute",
@@ -899,6 +985,7 @@ test(
           "0.05",
           "--json",
         ]);
+        executedIds.push(other.json.data.requestId);
         assert.equal(
           (
             await ok([
@@ -945,7 +1032,12 @@ test(
 
     await t.test("journal pagination with cursors and --all", async () => {
       const all = await ok(["requests", "list", "--all", "--json"]);
-      assert.ok(all.json.data.length >= 3);
+      // Exactly the executed requests: no preview, refused admission or repeat execute is journaled.
+      assert.deepEqual(
+        all.json.data.map((r: any) => r.requestId).sort(),
+        [...executedIds].sort()
+      );
+      assert.equal(executedIds.length, 4);
       assert.equal(all.json.meta.nextCursor, null);
       const first = await ok(["requests", "list", "--limit", "1", "--json"]);
       assert.equal(first.json.data.length, 1);
