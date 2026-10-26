@@ -773,16 +773,21 @@ test("an offline account's positions say they are its last snapshot; --all keeps
           data: [{ ...ACCOUNTS[0], connected: false }],
           meta: { count: 1, limit: 100, nextCursor: null },
         })
-      : send(200, {
-          data: [position],
-          meta: {
-            currency: "USD",
-            state: "stale",
-            count: 1,
-            limit: 500,
-            nextCursor: null,
-          },
-        })
+      : req.url?.includes("/orders/")
+        ? send(200, {
+            data: { ...position, type: "limit", price: "1.1", expiry: null },
+            meta: { currency: "USD", state: "unavailable" },
+          })
+        : send(200, {
+            data: [position],
+            meta: {
+              currency: "USD",
+              state: "stale",
+              count: 1,
+              limit: 500,
+              nextCursor: null,
+            },
+          })
   );
   const { run, cleanup } = await runner(server.origin);
   try {
@@ -791,6 +796,18 @@ test("an offline account's positions say they are its last snapshot; --all keeps
     assert.match(
       table.err,
       /^Stale: the account's terminal is offline; this is its last snapshot\.\n$/
+    );
+    const order = await run([
+      "orders",
+      "show",
+      "7",
+      "--account",
+      ACCOUNTS[0].id,
+    ]);
+    assert.equal(order.code, 0, order.err);
+    assert.equal(
+      order.err,
+      "Unavailable: no terminal of this account has answered since the app started.\n"
     );
     const all = await run([
       "positions",

@@ -113,7 +113,7 @@ export function utcExpiry(value: string) {
 
 /**
  * Lists a cursor-paged collection: one page (with a hint for the next), or with --all the whole of it in one envelope
- * that keeps the last page's other meta (an account's currency and state, say). Answers the envelope's meta.
+ * that keeps the last page's other meta, such as an account's currency and state. Answers the envelope's meta.
  */
 export async function listCollection<T>(
   client: ApiClient,
