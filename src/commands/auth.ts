@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { ApiClient, CliError, EXIT, type Session } from "../client.js";
+import { ApiClient, CliError, EXIT, type Session, usage } from "../client.js";
 import {
   clearToken,
   configPath,
@@ -76,7 +76,7 @@ Examples:
 The app answers on 127.0.0.1 only, on the HTTP port shown in its Settings ›
 Connection (5580 by default). Use 127.0.0.1, not localhost.
 
-Exit codes: 0 saved (or printed), 1 invalid URL / server unreachable or incompatible.`
+Exit codes: 0 saved (or printed), 1 server unreachable or incompatible, 2 invalid URL.`
     )
     .action(async (url: string | undefined, o) => {
       const saved = await loadProfile();
@@ -139,7 +139,8 @@ Examples:
   mt4-quote-bridge auth login --server http://127.0.0.1:5580
   echo "$QB_API_KEY" | mt4-quote-bridge auth login -s http://127.0.0.1:5580 --api-key-stdin
 
-Exit codes: 0 signed in, 1 error (unreachable, incompatible), 3 key rejected.`
+Exit codes: 0 signed in, 1 error (unreachable, incompatible), 2 no key source or
+invalid URL, 3 key rejected.`
     )
     .action(async (o) => {
       const saved = await loadProfile();
@@ -159,9 +160,7 @@ Exit codes: 0 signed in, 1 error (unreachable, incompatible), 3 key rejected.`
       if (o.apiKeyStdin) key = await readStdin();
       else if (interactive()) key = await askHidden("API key: ");
       else
-        throw new CliError(
-          "No terminal for an API key prompt; use --api-key-stdin."
-        );
+        throw usage("No terminal for an API key prompt; use --api-key-stdin.");
       key = key.trim();
       if (!isApiKey(key))
         throw new CliError(
@@ -261,6 +260,7 @@ revoked, 1 server unreachable.`
   auth
     .command("logout")
     .description("delete the saved API key locally")
+    .option("--json", "print the result as JSON")
     .addHelpText(
       "after",
       `
@@ -268,12 +268,17 @@ Removes the API key from ${configPath()}. The saved
 server URL is kept. The key itself stays valid; revoke it in the app window
 (Settings › API keys) if it should stop working everywhere.`
     )
-    .action(async () => {
-      const { server } = await connection();
+    .action(async (o) => {
+      const { server, profile } = await connection();
+      const removed = !!profile?.token;
       await clearToken();
-      print(
-        `Removed the saved API key for ${server}. To disable the key itself, revoke it in the app window (Settings › API keys).`
-      );
+      if (o.json) print(envelope({ server, removed }));
+      else
+        print(
+          removed
+            ? `Removed the saved API key for ${server}. To disable the key itself, revoke it in the app window (Settings › API keys).`
+            : `No API key was saved for ${server}.`
+        );
     });
   return auth;
 }
@@ -297,8 +302,8 @@ async function chooseServer(url: string | undefined, fallback: string) {
   try {
     return normalizeServer(value);
   } catch (e) {
-    throw new CliError(
-      `Invalid server URL "${value}": ${e instanceof Error ? e.message : e}. Example: http://192.168.1.20:3000`
+    throw usage(
+      `Invalid server URL "${value}": ${e instanceof Error ? e.message : e}. Example: ${DEFAULT_SERVER}`
     );
   }
 }

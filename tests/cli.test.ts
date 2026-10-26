@@ -688,6 +688,53 @@ test("execute posts once, then only reads the request; unknown exits 10 with rev
   }
 });
 
+test("auth: a malformed server URL and a login with no key source are usage errors; logout answers --json", async () => {
+  const server = await stub((req, _body, send) =>
+    req.url === "/api/v1/info"
+      ? send(200, {
+          data: { service: "mt4-quote-bridge", apiVersion: 1 },
+          meta: {},
+        })
+      : send(404, {})
+  );
+  const { run, dir, cleanup } = await runner(server.origin);
+  const saved = { MT4QB_API_KEY: "", MT4QB_SERVER: "" };
+  try {
+    const badUrl = await run(
+      ["auth", "server", "ftp://127.0.0.1:5580", "--json"],
+      undefined,
+      saved
+    );
+    assert.equal(badUrl.code, EXIT.usage);
+    assert.equal(JSON.parse(badUrl.err).error.code, "usage");
+    assert.doesNotMatch(badUrl.err, /192\.168/, "examples use 127.0.0.1");
+
+    const noKey = await run(
+      ["auth", "login", "-s", server.origin, "--json"],
+      undefined,
+      saved
+    );
+    assert.equal(noKey.code, EXIT.usage);
+    assert.equal(JSON.parse(noKey.err).error.code, "usage");
+
+    assert.equal(
+      (await run(["auth", "server", server.origin], undefined, saved)).code,
+      0
+    );
+    const out = await run(["auth", "logout", "--json"], undefined, saved);
+    assert.equal(out.code, 0, out.err);
+    assert.deepEqual(JSON.parse(out.out), {
+      data: { server: server.origin, removed: false },
+      meta: {},
+    });
+    const kept = JSON.parse(await readFile(join(dir, "config.json"), "utf8"));
+    assert.equal(kept.server, server.origin, "logout keeps the server");
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
 test("auth login takes only an API key, verifies it and saves its new scope name; config show never prints it", async () => {
   const key = "qbk_" + "ab".repeat(32);
   const server = await stub((req, _body, send) => {
