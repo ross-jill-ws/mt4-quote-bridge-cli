@@ -755,6 +755,64 @@ test("every subcommand's help ends with its exit codes", () => {
   assert.deepEqual(missing, []);
 });
 
+test("an offline account's positions say they are its last snapshot; --all keeps the page's meta", async () => {
+  const position = {
+    ticket: "7",
+    symbol: "EURUSD",
+    side: "buy",
+    lots: "0.1",
+    openPrice: "1.1",
+    stopLoss: null,
+    takeProfit: null,
+    profit: "1",
+    magic: 0,
+  };
+  const server = await stub((req, _body, send) =>
+    req.url?.startsWith("/api/v1/accounts?")
+      ? send(200, {
+          data: [{ ...ACCOUNTS[0], connected: false }],
+          meta: { count: 1, limit: 100, nextCursor: null },
+        })
+      : send(200, {
+          data: [position],
+          meta: {
+            currency: "USD",
+            state: "stale",
+            count: 1,
+            limit: 500,
+            nextCursor: null,
+          },
+        })
+  );
+  const { run, cleanup } = await runner(server.origin);
+  try {
+    const table = await run(["positions", "list", "--account", ACCOUNTS[0].id]);
+    assert.equal(table.code, 0, table.err);
+    assert.match(
+      table.err,
+      /^Stale: the account's terminal is offline; this is its last snapshot\.\n$/
+    );
+    const all = await run([
+      "positions",
+      "list",
+      "--account",
+      ACCOUNTS[0].id,
+      "--all",
+      "--json",
+    ]);
+    assert.deepEqual(JSON.parse(all.out).meta, {
+      currency: "USD",
+      state: "stale",
+      count: 1,
+      pages: 1,
+      nextCursor: null,
+    });
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
 test("an error's reason from the app is printed under its message in table output", async () => {
   const server = await stub((req, _body, send) =>
     req.url?.startsWith("/api/v1/accounts?")

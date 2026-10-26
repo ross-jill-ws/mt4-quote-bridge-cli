@@ -87,9 +87,15 @@ export function accountsCommand() {
         "after",
         "\nEXECUTOR: ready (exactly one connected chart with demo trading enabled and ready), zero, multiple, not-ready or real-account."
       )
-      .action(async (o) =>
-        listCollection(await api(), "/api/v1/accounts", {}, o, ACCOUNT_COLUMNS)
-      )
+      .action(async (o) => {
+        await listCollection(
+          await api(),
+          "/api/v1/accounts",
+          {},
+          o,
+          ACCOUNT_COLUMNS
+        );
+      })
   );
 
   accounts.addCommand(
@@ -256,6 +262,18 @@ const TRADE_COLUMNS = (kind: "positions" | "orders") => [
   },
 ];
 
+/** Says on stderr when an account's positions or orders are not a fresh read (`meta.state`). */
+function snapshotNote(meta: Record<string, any> | undefined) {
+  if (meta?.state === "stale")
+    note(
+      "Stale: the account's terminal is offline; this is its last snapshot."
+    );
+  else if (meta?.state === "unavailable")
+    note(
+      "Unavailable: no terminal of this account has answered since the app started."
+    );
+}
+
 function tradeList(kind: "positions" | "orders") {
   return jsonOption(accountOptions(pageOptions(new Command("list"))))
     .description(
@@ -266,13 +284,14 @@ function tradeList(kind: "positions" | "orders") {
     .action(async (o) => {
       const client = await api();
       const account = await resolveAccount(client, o.account, o.broker);
-      await listCollection(
+      const meta = await listCollection(
         client,
         accountPath(account, `/${kind}`),
         {},
         o,
         TRADE_COLUMNS(kind)
       );
+      if (!o.json) snapshotNote(meta);
     });
 }
 
@@ -294,6 +313,7 @@ function tradeShow(kind: "positions" | "orders") {
         accountPath(account, `/${kind}/${ticketArg(ticket)}`)
       );
       emit(o.json, envelope, () => table([envelope.data], TRADE_COLUMNS(kind)));
+      if (!o.json) snapshotNote(envelope.meta);
     });
 }
 

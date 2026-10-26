@@ -111,7 +111,10 @@ export function utcExpiry(value: string) {
   return value;
 }
 
-/** Lists a cursor-paged collection: one page (with a hint for the next), or with --all the whole of it in one envelope. */
+/**
+ * Lists a cursor-paged collection: one page (with a hint for the next), or with --all the whole of it in one envelope
+ * that keeps the last page's other meta (an account's currency and state, say). Answers the envelope's meta.
+ */
 export async function listCollection<T>(
   client: ApiClient,
   path: string,
@@ -122,16 +125,17 @@ export async function listCollection<T>(
   if (o.all) {
     if (o.cursor)
       throw usage("--all starts at the beginning; leave out --cursor.");
-    const { data, pages } = await client.all<T>(path, {
+    const { data, pages, meta } = await client.all<T>(path, {
       ...query,
       limit: o.limit,
     });
+    const { count: _count, limit: _limit, nextCursor: _next, ...rest } = meta;
     const envelope: Envelope<T[]> = {
       data,
-      meta: { count: data.length, pages, nextCursor: null },
+      meta: { ...rest, count: data.length, pages, nextCursor: null },
     };
     emit(o.json, envelope, () => table(data, columns));
-    return;
+    return envelope.meta;
   }
   const page = await client.get<T[]>(path, {
     ...query,
@@ -140,6 +144,7 @@ export async function listCollection<T>(
   });
   emit(o.json, page, () => table(page.data, columns));
   if (!o.json) moreHint(page.meta);
+  return page.meta;
 }
 
 /** The client for the saved or environment sign-in. */

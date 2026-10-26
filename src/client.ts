@@ -206,10 +206,11 @@ export class ApiClient {
   async all<T = any>(
     path: string,
     query: Query = {}
-  ): Promise<{ data: T[]; pages: number }> {
+  ): Promise<{ data: T[]; pages: number; meta: Record<string, any> }> {
     const data: T[] = [];
     let cursor: string | undefined;
     let pages = 0;
+    let meta: Record<string, any> = {};
     do {
       const page = await this.get<T[]>(path, {
         ...query,
@@ -218,9 +219,10 @@ export class ApiClient {
       });
       data.push(...page.data);
       pages++;
+      meta = page.meta;
       cursor = page.meta.nextCursor ?? undefined;
     } while (cursor);
-    return { data, pages };
+    return { data, pages, meta };
   }
 
   /** Verifies that the server is QuoteBridge speaking this REST API version. */

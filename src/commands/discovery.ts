@@ -10,14 +10,14 @@ export function indicatorsCommand() {
   indicators.addCommand(
     jsonOption(pageOptions(new Command("list")))
       .description("list enabled indicator packages (GET /api/v1/indicators)")
-      .action(async (o) =>
-        listCollection(await api(), "/api/v1/indicators", {}, o, [
+      .action(async (o) => {
+        await listCollection(await api(), "/api/v1/indicators", {}, o, [
           { header: "PACKAGE ID", value: (p: any) => p.id },
           { header: "NAME", value: (p: any) => p.name },
           { header: "VERSION", value: (p: any) => p.version },
           { header: "PLACEMENT", value: (p: any) => p.placement },
-        ])
-      )
+        ]);
+      })
   );
   indicators.addCommand(
     jsonOption(new Command("show"))
@@ -81,8 +81,8 @@ export function terminalsCommand() {
   terminals.addCommand(
     jsonOption(pageOptions(new Command("list")))
       .description("terminals heard from (GET /api/v1/terminals)")
-      .action(async (o) =>
-        listCollection(await api(), "/api/v1/terminals", {}, o, [
+      .action(async (o) => {
+        await listCollection(await api(), "/api/v1/terminals", {}, o, [
           { header: "TERMINAL ID", value: (t: any) => t.id },
           { header: "NAME", value: (t: any) => t.name },
           { header: "BROKER SERVER", value: (t: any) => t.brokerServer },
@@ -92,8 +92,8 @@ export function terminalsCommand() {
             value: (t: any) => (t.connected ? "yes" : "no"),
           },
           { header: "FEEDS", value: (t: any) => t.feeds, align: "right" },
-        ])
-      )
+        ]);
+      })
   );
   terminals.addCommand(
     jsonOption(new Command("show"))
@@ -126,8 +126,10 @@ export function terminalsCommand() {
       .action(async (terminalId: string, feedId: string | undefined, o) => {
         const client = await api();
         const base = `/api/v1/terminals/${encodeURIComponent(terminalId)}/feeds`;
-        if (feedId === undefined)
-          return listCollection(client, base, {}, o, FEED_COLUMNS);
+        if (feedId === undefined) {
+          await listCollection(client, base, {}, o, FEED_COLUMNS);
+          return;
+        }
         const envelope = await client.get(
           `${base}/${encodeURIComponent(feedId)}`
         );
