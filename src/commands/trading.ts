@@ -478,6 +478,16 @@ export function ordersCommand() {
       .option("--sl <price>", "absolute stop loss", decimal)
       .option("--tp <price>", "absolute take profit", decimal)
       .option(
+        "--sl-points <points>",
+        "stop loss distance in points from the entry",
+        decimal
+      )
+      .option(
+        "--tp-points <points>",
+        "take profit distance in points from the entry",
+        decimal
+      )
+      .option(
         "--risk-amount <money>",
         "risk plan: loss in the account's currency",
         decimal
@@ -502,9 +512,11 @@ export function ordersCommand() {
         MARKET_HELP +
           `
 
-Stops are either absolute (--sl/--tp) or a risk plan (one --risk-* and
---reward-ratio), never both. A risk plan works the stops out for --lots,
-rounded toward the entry; a plan that cannot be met is refused, not widened.
+Stops take one form: absolute (--sl/--tp), distances in points from the
+entry (--sl-points/--tp-points: a buy's stop loss below it, a sell's above),
+or a risk plan (one --risk-* and --reward-ratio). Distances and a risk plan
+are worked out from the previewed entry, rounded toward it; one that cannot
+be met is refused, not widened.
 Estimates exclude fees, swaps and slippage and are not loss caps.` +
           PREVIEW_HELP +
           `
@@ -538,6 +550,24 @@ Example:
         if (o.expiry !== undefined) body.expiry = o.expiry;
         if (o.sl !== undefined) body.stopLoss = o.sl;
         if (o.tp !== undefined) body.takeProfit = o.tp;
+        if (o.slPoints !== undefined || o.tpPoints !== undefined) {
+          const others = [
+            o.sl,
+            o.tp,
+            o.riskAmount,
+            o.riskPercent,
+            o.riskPoints,
+            o.rewardRatio,
+          ];
+          if (others.some((v) => v !== undefined))
+            throw usage(
+              "Give stops one way: --sl/--tp, --sl-points/--tp-points or a risk plan."
+            );
+          body.distance = {
+            ...(o.slPoints !== undefined && { stopLoss: o.slPoints }),
+            ...(o.tpPoints !== undefined && { takeProfit: o.tpPoints }),
+          };
+        }
         const losses = [
           ["amount", o.riskAmount],
           ["balancePercent", o.riskPercent],

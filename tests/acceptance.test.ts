@@ -867,6 +867,59 @@ test(
           ],
           ["1.088", "1.094"]
         );
+        const distance = await ok([
+          "orders",
+          "preview",
+          "--account",
+          mainId,
+          "--symbol",
+          "EURUSD",
+          "--side",
+          "buy",
+          "--type",
+          "limit",
+          "--price",
+          "1.09",
+          "--lots",
+          "0.1",
+          "--sl-points",
+          "200",
+          "--tp-points",
+          "500",
+          "--json",
+        ]);
+        assert.deepEqual(
+          [
+            distance.json.data.normalizedIntent.stopLoss,
+            distance.json.data.normalizedIntent.takeProfit,
+          ],
+          ["1.088", "1.095"]
+        );
+        for (const other of [
+          ["--sl", "1.08"],
+          ["--risk-points", "200", "--reward-ratio", "2"],
+        ])
+          await fails(
+            [
+              "orders",
+              "preview",
+              "--account",
+              mainId,
+              "--symbol",
+              "EURUSD",
+              "--side",
+              "buy",
+              "--type",
+              "market",
+              "--lots",
+              "0.1",
+              "--tp-points",
+              "300",
+              ...other,
+            ],
+            2,
+            "usage"
+          );
         await fails(
           [
             "orders",

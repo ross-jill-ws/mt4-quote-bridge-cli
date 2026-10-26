@@ -56,6 +56,7 @@ mt4-quote-bridge markets quote EURUSD --broker EasyForex-Demo
 mt4-quote-bridge markets candles EURUSD --broker EasyForex-Demo --timeframe H1
 mt4-quote-bridge accounts funds --account <account-id>
 mt4-quote-bridge orders preview --account <account-id> --symbol EURUSD --side buy --type market --lots 0.10
+mt4-quote-bridge orders preview --account <account-id> --symbol EURUSD --side buy --type market --lots 0.10 --sl-points 200 --tp-points 400
 mt4-quote-bridge positions close <ticket> --account <account-id>
 mt4-quote-bridge requests execute <request-id> --confirm
 mt4-quote-bridge requests show <request-id>
@@ -71,6 +72,9 @@ mt4-quote-bridge requests show <request-id>
   the request until a definitive result (`--wait`, 25 s by default). It never retries; to find out what happened, run
   `requests show`. An unknown outcome blocks its account, previews included, until a result arrives or you
   `requests review` it after checking MetaTrader.
+- **Stops, one form per order.** Absolute prices (`--sl`/`--tp`), distances in points from the entry
+  (`--sl-points`/`--tp-points`: a buy's stop loss below it, a sell's above), or a risk plan (one `--risk-*` and
+  `--reward-ratio`). Distances and a risk plan are worked out at the previewed entry; mixing forms exits 2.
 - **Output.** Tables for people; `--json` prints the REST envelope (`{ data, meta }`) on stdout. Errors and hints go to
   stderr; with `--json`, an error is `{ error: { code, message, details } }` on stderr.
 - **Paging.** Collections take `--limit`, `--cursor` (the previous page's `meta.nextCursor`) or `--all`. Candles and

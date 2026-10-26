@@ -26,7 +26,7 @@ Otherwise hand over to the human: exit `3` means they create a key in the QuoteB
 
 Trading is demo-only and always the user's decision. The agent prepares previews; the user approves each one.
 
-1. Act only when the user asks for a specific trade: account, market, side, size and stops come from them. Fill nothing in on their behalf.
+1. Act only when the user asks for a specific trade: account, market, side, size and stops come from them. Fill nothing in on their behalf. Stops take the user's form: prices (`--sl`/`--tp`), points from the entry (`--sl-points`/`--tp-points`) or a risk plan (`--risk-*` with `--reward-ratio`), one form per order.
 2. Preview with `--json` (`orders preview`, `orders modify|cancel`, `positions modify|close`). A preview sends nothing.
 3. Show the user the preview: account, normalized intent, limits, estimates and every warning (an outside trade, missing stops). It expires 30 seconds after `createdAt`.
 4. Run `requests execute <request-id> --confirm` only after the user explicitly approves that exact preview in this conversation. `--confirm` records their approval; it never replaces it. An expired or changed preview (exit `7`) needs a fresh preview and fresh approval.
