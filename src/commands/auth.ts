@@ -266,7 +266,12 @@ revoked, 1 server unreachable.`
       `
 Removes the API key from ${configPath()}. The saved
 server URL is kept. The key itself stays valid; revoke it in the app window
-(Settings › API keys) if it should stop working everywhere.`
+(Settings › API keys) if it should stop working everywhere.
+
+--json prints { data: { server, removed }, meta: {} }; removed is false when no
+key was saved.
+
+Exit codes: 0 removed (or nothing to remove), 2 usage error.`
     )
     .action(async (o) => {
       const { server, profile } = await connection();
