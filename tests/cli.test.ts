@@ -18,6 +18,16 @@ import { DEFAULT_SERVER, normalizeServer } from "../src/config.js";
 import { table } from "../src/output.js";
 import { resolveAccount, resolveMarket } from "../src/resolve.js";
 import { utcExpiry, utcTime } from "../src/commands/common.js";
+import { buildProgram } from "../src/program.js";
+import type { Command } from "commander";
+
+/** A command's whole --help text, including the text added after it. */
+function helpOf(cmd: Command) {
+  let text = "";
+  cmd.configureOutput({ writeOut: (s) => void (text += s) });
+  cmd.outputHelp();
+  return text;
+}
 
 type Handler = (
   req: IncomingMessage,
@@ -729,6 +739,56 @@ test("auth: a malformed server URL and a login with no key source are usage erro
     });
     const kept = JSON.parse(await readFile(join(dir, "config.json"), "utf8"));
     assert.equal(kept.server, server.origin, "logout keeps the server");
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
+test("every subcommand's help ends with its exit codes", () => {
+  const leaves = (cmd: Command): Command[] =>
+    cmd.commands.length ? cmd.commands.flatMap(leaves) : [cmd];
+  const program = buildProgram();
+  const missing = leaves(program)
+    .filter((c) => !/\nExit codes:/.test(helpOf(c)))
+    .map((c) => `${c.parent?.name()} ${c.name()}`);
+  assert.deepEqual(missing, []);
+});
+
+test("an error's reason from the app is printed under its message in table output", async () => {
+  const server = await stub((req, _body, send) =>
+    req.url?.startsWith("/api/v1/accounts?")
+      ? send(200, {
+          data: [{ ...ACCOUNTS[0] }],
+          meta: { count: 1, limit: 100, nextCursor: null },
+        })
+      : req.url?.startsWith("/api/v1/markets?")
+        ? send(200, {
+            data: [MARKETS[0]],
+            meta: { count: 1, limit: 100, nextCursor: null },
+          })
+        : send(503, {
+            error: {
+              code: "read-failed",
+              message: "The terminal could not read this market's conditions.",
+              details: { reason: "Unknown symbol" },
+            },
+          })
+  );
+  const { run, cleanup } = await runner(server.origin);
+  try {
+    const out = await run([
+      "accounts",
+      "conditions",
+      "EURUSD",
+      "--account",
+      ACCOUNTS[0].id,
+    ]);
+    assert.equal(out.code, EXIT.unavailable);
+    assert.equal(
+      out.err,
+      "error: The terminal could not read this market's conditions. (read-failed)\n  reason: Unknown symbol\n"
+    );
   } finally {
     server.close();
     await cleanup();

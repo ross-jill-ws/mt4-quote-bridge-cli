@@ -73,14 +73,17 @@ override the saved server and key.
 
 ${EXIT_HELP}`
     );
+  // Every subcommand's help ends with the exit codes; auth and config give their own, shorter lists.
+  for (const family of program.commands)
+    if (family.name() !== "auth" && family.name() !== "config")
+      for (const cmd of family.commands)
+        cmd.addHelpText("after", `\n${EXIT_HELP}`);
   // Usage errors exit 2, not commander's 1, and keep stdout clean.
   const strict = (cmd: Command) => {
-    cmd
-      .exitOverride()
-      .configureOutput({
-        writeOut: (s) => process.stdout.write(s),
-        writeErr: (s) => void (json || process.stderr.write(s)),
-      });
+    cmd.exitOverride().configureOutput({
+      writeOut: (s) => process.stdout.write(s),
+      writeErr: (s) => void (json || process.stderr.write(s)),
+    });
     cmd.commands.forEach(strict);
   };
   strict(program);
@@ -121,9 +124,13 @@ export async function main(args: string[]) {
       process.stderr.write(
         `error: ${error.message}${error.code !== "cli-error" && error.code !== "usage" ? ` (${error.code})` : ""}\n`
       );
-      const candidates = (
-        error.details as { candidates?: Record<string, unknown>[] } | null
-      )?.candidates;
+      const details = error.details as {
+        candidates?: Record<string, unknown>[];
+        reason?: unknown;
+      } | null;
+      if (typeof details?.reason === "string")
+        process.stderr.write(`  reason: ${details.reason}\n`);
+      const candidates = details?.candidates;
       for (const c of candidates ?? [])
         process.stderr.write(`  - ${Object.values(c).join("  ")}\n`);
     }

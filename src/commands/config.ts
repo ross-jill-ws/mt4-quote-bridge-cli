@@ -13,6 +13,10 @@ export function configCommand() {
         "print the effective server, where it comes from, and whether a key is saved (never the key)"
       )
       .option("--json", "print { data, meta } like the other commands")
+      .addHelpText(
+        "after",
+        "\nExit codes: 0 always (it reads only the local config; an unreadable file counts as none)."
+      )
       .action(async (o) => {
         const { server, token, profile } = await connection();
         const data = {
