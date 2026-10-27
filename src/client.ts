@@ -12,7 +12,7 @@ export const EXIT = {
   usage: 2,
   /** Not signed in, or the API key is missing, invalid or revoked (401). */
   auth: 3,
-  /** Forbidden (403): readonly key, demo trading off, real account, broker refuses the symbol. */
+  /** Forbidden (403): readonly key, demo trading off, broker refuses the symbol, the EA's demo-only check. */
   forbidden: 4,
   /** No such market, account, ticket, request, terminal or indicator (404). */
   notFound: 5,
@@ -133,14 +133,15 @@ export class ApiClient {
         signal: AbortSignal.timeout(options.raw ? 30 * 60000 : 60000),
       });
     } catch (e) {
-      const reason =
+      const cause =
         e instanceof Error
-          ? ((e.cause as Error | undefined)?.message ?? e.message)
-          : String(e);
-      throw new CliError(
+          ? (e.cause as (Error & { code?: string }) | undefined)
+          : undefined;
+      const reason =
+        e instanceof Error ? (cause?.message ?? e.message) : String(e);
+      throw new UnreachableError(
         `Cannot reach QuoteBridge at ${this.server} (${reason}). Is the app running? Check the server with: mt4-quote-bridge config show`,
-        EXIT.error,
-        "unreachable"
+        NOT_CONNECTED.has(cause?.code ?? "")
       );
     }
     if (response.status >= 300 && response.status < 400) {
@@ -278,6 +279,19 @@ export type Session = {
   key: { name: string; prefix: string; scope: "readonly" | "trader" };
   expires: number | null;
 };
+
+/** Connection errors raised before any byte of the request left: the app cannot have received it. */
+const NOT_CONNECTED = new Set(["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN"]);
+
+/** The app did not answer. `neverConnected`: the connection itself failed, so the request was not sent. */
+export class UnreachableError extends CliError {
+  constructor(
+    message: string,
+    readonly neverConnected: boolean
+  ) {
+    super(message, EXIT.error, "unreachable");
+  }
+}
 
 export class RedirectError extends CliError {
   constructor(

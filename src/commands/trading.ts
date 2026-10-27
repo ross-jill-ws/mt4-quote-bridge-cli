@@ -6,6 +6,7 @@ import {
   ApiError,
   CliError,
   EXIT,
+  UnreachableError,
   usage,
   type Envelope,
 } from "../client.js";
@@ -545,6 +546,15 @@ Example:
   mt4-quote-bridge orders preview --account <account-id> --symbol EURUSD --side buy --type market --lots 0.10`
       )
       .action(async (o) => {
+        if (
+          o.type === "market" &&
+          (o.price !== undefined || o.expiry !== undefined)
+        )
+          throw usage(
+            "A market order takes no --price or --expiry: it fills at the current price."
+          );
+        if (o.type !== "market" && o.price === undefined)
+          throw usage(`A ${o.type} order needs --price, its entry price.`);
         const client = await api();
         const account = await resolveAccount(client, o.account, o.broker);
         // The account fixes the broker server the symbol is looked up on.
@@ -761,8 +771,9 @@ A lost answer is recovered with: mt4-quote-bridge requests show <request-id>
 
 Exit status: 0 succeeded; 10 unknown (check MetaTrader, then review; never
 retry); 11 failed (refused); 12 sent but no definitive result yet; 7 the
-preview expired or no longer holds (preview again); 1 the answer was lost (it
-may have been sent: requests show, never execute again).`
+preview expired or no longer holds (preview again); 1 the app could not be
+reached (nothing was sent) or the answer was lost (it may have been sent:
+requests show, never execute again).`
       )
       .action(async (id: string, o) => {
         requestIdArg(id);
@@ -780,6 +791,14 @@ may have been sent: requests show, never execute again).`
           // Without the server's answer the request may still have been sent: read it, never execute again.
           // One error carries the warning, so --json readers get it in the envelope too.
           if (e instanceof ApiError) throw e;
+          // Errors before anything left (no key, a refused connection) sent nothing: say so, with their own code.
+          if (e instanceof CliError && e.code === "not-signed-in") throw e;
+          if (e instanceof UnreachableError && e.neverConnected)
+            throw new CliError(
+              `Nothing was sent. ${e.message}`,
+              e.exitCode,
+              e.code
+            );
           throw new CliError(
             `The answer was lost; the request may have been sent. Do not execute again. Check with:\n  mt4-quote-bridge requests show ${id}`,
             EXIT.error,

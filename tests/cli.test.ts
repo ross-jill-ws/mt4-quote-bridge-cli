@@ -374,6 +374,56 @@ async function runner(origin: string) {
   return { run, dir, cleanup: () => rm(dir, { recursive: true, force: true }) };
 }
 
+test("an execute that never reached the app says nothing was sent, not that the answer was lost", async () => {
+  const server = await stub(directory);
+  const { run, dir, cleanup } = await runner(server.origin);
+  try {
+    const id = "0123456789abcdef0123456789abcdef";
+    const noKey = await run(["requests", "execute", id, "--confirm", "--json"], undefined, {
+      MT4QB_API_KEY: "",
+      MT4QB_CONFIG: join(dir, "none.json"),
+    });
+    assert.equal(noKey.code, EXIT.auth);
+    assert.equal(JSON.parse(noKey.err).error.code, "not-signed-in");
+    assert.doesNotMatch(noKey.err, /may have been sent/);
+    assert.deepEqual(server.seen, []);
+
+    // A closed port refuses the connection: the execute cannot have reached the app.
+    const closed = await stub(directory);
+    closed.close();
+    const refused = await run(["requests", "execute", id, "--confirm"], undefined, { MT4QB_SERVER: closed.origin });
+    assert.equal(refused.code, EXIT.error);
+    assert.match(refused.err, /Nothing was sent/);
+    assert.doesNotMatch(refused.err, /may have been sent/);
+    assert.match(refused.err, /\(unreachable\)/);
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
+test("a pending order needs --price and a market order takes no --price or --expiry, before any preview is asked", async () => {
+  const server = await stub(directory);
+  const { run, cleanup } = await runner(server.origin);
+  try {
+    const order = (...more: string[]) => ["orders", "preview", "--account", "a-demo", "--symbol", "EURUSD", "--side", "buy", "--lots", "0.1", ...more, "--json"];
+    for (const type of ["limit", "stop"]) {
+      const noPrice = await run(order("--type", type));
+      assert.equal(noPrice.code, EXIT.usage, type);
+      assert.match(JSON.parse(noPrice.err).error.message, new RegExp(`A ${type} order needs --price`));
+    }
+    for (const extra of [["--price", "1.08"], ["--expiry", "2026-12-01T00:00:00Z"]]) {
+      const market = await run(order("--type", "market", ...extra));
+      assert.equal(market.code, EXIT.usage, extra[0]);
+      assert.match(JSON.parse(market.err).error.message, /A market order takes no --price or --expiry/);
+    }
+    assert.ok(!server.seen.some((s) => s.startsWith("POST")), "no preview was asked");
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
 test("mutations need explicit accounts and confirmation: refused arguments send nothing", async () => {
   const server = await stub(directory);
   const { run, cleanup } = await runner(server.origin);
