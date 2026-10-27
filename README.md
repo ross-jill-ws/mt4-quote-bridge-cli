@@ -32,11 +32,12 @@ mt4-quote-bridge auth status
 mt4-quote-bridge config show        # effective server, config file, whether a key is saved
 ```
 
-The app answers on `127.0.0.1` only, on the HTTP port in its Settings › Connection (5580 by default). Create a key in
-the **app window › Settings › API keys**: `readonly` reads everything; `trader` may also preview, execute and review
-trading requests. Keys, Demo trading, the lot cap and slippage are managed in the app window only. The key is saved to
-`~/.mt4-quote-bridge/config.json` with owner-only permissions; `MT4QB_SERVER`, `MT4QB_API_KEY` and `MT4QB_CONFIG`
-override the saved values. For scripts, pipe the key to `auth login --api-key-stdin`.
+The app answers on this computer only (`127.0.0.1`, `localhost` or `[::1]`), on the HTTP port in its Settings ›
+Connection (5580 by default). Create a key in the **app window › Settings › API keys**: `readonly` reads everything;
+`trader` may also preview, execute and review trading requests. Keys, Demo trading, the lot cap and slippage are
+managed in the app window only. The key is saved to `~/.mt4-quote-bridge/config.json` with owner-only permissions;
+`MT4QB_SERVER`, `MT4QB_API_KEY` and `MT4QB_CONFIG` override the saved values. For scripts, pipe the key to
+`auth login --api-key-stdin`.
 
 ## Commands
 

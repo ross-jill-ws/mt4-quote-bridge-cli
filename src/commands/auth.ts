@@ -73,8 +73,8 @@ Examples:
   mt4-quote-bridge auth server http://127.0.0.1:5580
   mt4-quote-bridge auth server 127.0.0.1:5581 --no-check
 
-The app answers on 127.0.0.1 only, on the HTTP port shown in its Settings ›
-Connection (5580 by default). Use 127.0.0.1, not localhost.
+The app answers on this computer only (127.0.0.1, localhost or [::1]), on the
+HTTP port shown in its Settings › Connection (5580 by default).
 
 Exit codes: 0 saved (or printed), 1 server unreachable or incompatible, 2 invalid URL.`
     )

@@ -16,7 +16,7 @@ export type Profile = {
   savedAt: number;
 };
 
-/** The app answers on 127.0.0.1 only; 5580 is its default HTTP port (Settings › Connection). */
+/** The app answers on loopback only (127.0.0.1, localhost or [::1]); 5580 is its default HTTP port (Settings › Connection). */
 export const DEFAULT_SERVER = "http://127.0.0.1:5580";
 
 export function configPath() {
