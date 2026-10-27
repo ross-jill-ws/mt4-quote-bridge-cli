@@ -1,5 +1,12 @@
 import { Command, InvalidArgumentError } from "commander";
-import { ApiClient, usage, type Envelope, type Query } from "../client.js";
+import {
+  ApiClient,
+  CliError,
+  EXIT,
+  usage,
+  type Envelope,
+  type Query,
+} from "../client.js";
 import { emit, moreHint, type Column, table } from "../output.js";
 
 export const TIMEFRAMES = [
@@ -146,6 +153,15 @@ export async function listCollection<T>(
   if (!o.json) moreHint(page.meta);
   return page.meta;
 }
+
+/** An output file that exists and may not be replaced (no --force): exit 13. */
+export const outputExists = (file: string) =>
+  new CliError(
+    `${file} exists. Choose another --output, or add --force to replace it.`,
+    EXIT.exists,
+    "output-exists",
+    { path: file }
+  );
 
 /** The client for the saved or environment sign-in. */
 export const api = () => ApiClient.fromProfile();

@@ -49,9 +49,27 @@ test(
       digits: 5,
       bars: bars(MIDNIGHT - 10 * HOUR, HOUR, 10),
     });
+    /** What main was asked to capture; it answers a fixed PNG, as the app window would. */
+    const captured: { view: "feeds" | "chart" }[] = [];
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 7]);
     const app = await fx.startRest(t, await fx.tempFolder(t, "cli-db"), {
       trading: true,
       dataFolders: { [TERMINAL]: data },
+      overrides: {
+        captureWindow: async (target: { view: "feeds" | "chart" }) => {
+          captured.push(target);
+          return {
+            view: target.view,
+            window: "minimised",
+            width: 1200,
+            height: 800,
+            scale: 1,
+            live: "live",
+            capturedAt: app.clock.now(),
+            png: png.toString("base64"),
+          };
+        },
+      },
     });
     const brokerNow = () => Math.floor(app.clock.now() / 1000) + 2 * HOUR;
     const quotes: Record<string, { bid: number; ask: number; digits: number }> =
@@ -1220,6 +1238,44 @@ test(
           !existsSync(join(scratch, "none.csv")),
           "a refused export leaves no file"
         );
+      }
+    );
+
+    await t.test(
+      "screenshots of the app window: Feeds and an exact market's chart, written here with --output; trader keys only",
+      async () => {
+        const feeds = await ok(["screenshot", "feeds", "--json"]);
+        assert.deepEqual(
+          [feeds.json.data.view, feeds.json.data.window, feeds.json.data.png],
+          ["feeds", "minimised", png.toString("base64")]
+        );
+        const file = join(scratch, "chart.png");
+        const chart = await ok([
+          "screenshot",
+          "chart",
+          "EURUSD",
+          "--broker",
+          DEMO,
+          "--output",
+          file,
+          "--json",
+        ]);
+        assert.deepEqual(await readFile(file), png);
+        assert.deepEqual(
+          [chart.json.data.view, chart.json.data.symbol, chart.json.data.brokerServer],
+          ["chart", "EURUSD", DEMO]
+        );
+        assert.deepEqual([chart.json.data.path, chart.json.data.bytes], [file, png.length]);
+        assert.ok(!("png" in chart.json.data), "--output keeps the base64 off stdout");
+        assert.equal(captured.at(-1)?.view, "chart");
+        await fails(
+          ["screenshot", "chart", "EURUSD", "--broker", DEMO, "--output", file],
+          13,
+          "output-exists"
+        );
+        const asked = captured.length;
+        await fails(["screenshot", "feeds"], 4, "insufficient-scope", app.readonlyKey);
+        assert.equal(captured.length, asked, "a readonly key never moves the window");
       }
     );
 

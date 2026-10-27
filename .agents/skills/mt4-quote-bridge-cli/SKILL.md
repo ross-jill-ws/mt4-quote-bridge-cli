@@ -1,6 +1,6 @@
 ---
 name: mt4-quote-bridge-cli
-description: Read MetaTrader market and account data, and prepare demo trades, with the `mt4-quote-bridge` CLI for QuoteBridge. Use when asked for MT4 quotes, candles, indicator values, history exports, Funds, positions or pending orders, or to place, modify, close or cancel a demo trade.
+description: Read MetaTrader market and account data, and prepare demo trades, with the `mt4-quote-bridge` CLI for QuoteBridge. Use when asked for MT4 quotes, candles, indicator values, history exports, Funds, positions or pending orders, to place, modify, close or cancel a demo trade, or to check that the QuoteBridge app looks healthy.
 ---
 
 # mt4-quote-bridge CLI
@@ -22,7 +22,15 @@ Otherwise hand over to the human: exit `3` means they create a key in the QuoteB
 - Exit `6` lists the candidates in `error.details.candidates`. Ask the user which one they mean, then rerun with the exact identity. The account the user names is the account you use: every account-scoped command carries its own `--account`.
 - Pass `--json` whenever you parse output. Prices, lots and money are decimal strings; times are UTC with a `brokerTime` sibling.
 
-## 3. Trade only with explicit authorization
+## 3. Screenshots move the trader's window
+
+`screenshot feeds` and `screenshot chart SYMBOL` capture the user's own app window. Use them to check that the app looks healthy (feeds streaming, a chart drawn, the live link up), not to read data: quotes, candles and indicator values come from the `markets` commands.
+
+- A screenshot switches the window to Feeds or to that market's chart and leaves it there, even when it is minimised or in the tray. Take one when the user asks to see the app or when data looks wrong, not routinely, and tell them the window's view changed.
+- It needs a `trader` key; a `readonly` key exits `4`. Exit `7` `window-busy` means a dialog is open in the window: tell the user, don't retry until they close it. Exit `7` `no-feed`: no terminal streams that market. Exit `9`: no window to capture or the capture timed out.
+- To look at the image, pass `--output <file>` (add `--force` to replace one); `--json` then reports `path` and `bytes`. Without `--output`, `--json` carries the PNG in base64.
+
+## 4. Trade only with explicit authorization
 
 Trading is demo-only and always the user's decision. The agent prepares previews; the user approves each one.
 

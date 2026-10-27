@@ -1,8 +1,8 @@
 # mt4-quote-bridge-cli
 
 Command-line client for **QuoteBridge for MetaTrader**. It reads markets, quotes, candles, recorded samples, history,
-indicator values, trading accounts, Funds, positions and pending orders, and prepares and sends demo trading requests,
-all through the app's REST API v1. The full manual, with every command and the API operation it calls, is
+indicator values, trading accounts, Funds, positions and pending orders, prepares and sends demo trading requests,
+and takes screenshots of the app window, all through the app's REST API v1. The full manual, with every command and the API operation it calls, is
 `docs/cli.md` in the QuoteBridge repository; the API itself is `docs/rest-api.md`.
 
 ```
@@ -49,6 +49,7 @@ override the saved values. For scripts, pipe the key to `auth login --api-key-st
 | `requests` | `list`, `show`, `execute --confirm`, `review` |
 | `indicators` | `list`, `show` |
 | `terminals` | `list`, `show`, `feeds` |
+| `screenshot` | `feeds`, `chart` (the app window; `trader` key) |
 | `auth`, `config` | sign-in and local configuration |
 
 ```sh
@@ -60,6 +61,7 @@ mt4-quote-bridge orders preview --account <account-id> --symbol EURUSD --side bu
 mt4-quote-bridge positions close <ticket> --account <account-id>
 mt4-quote-bridge requests execute <request-id> --confirm
 mt4-quote-bridge requests show <request-id>
+mt4-quote-bridge screenshot chart EURUSD --broker EasyForex-Demo --output chart.png
 ```
 
 - **Exact identities.** A market is a broker server and a symbol (`SYMBOL --broker <exact server>`, or `--market-id`);
@@ -81,6 +83,11 @@ mt4-quote-bridge requests show <request-id>
   indicator values page back with `--to`.
 - **Exports** need `--output`, never overwrite an existing file without `--force`, and with `--json` print the file's
   metadata, not its bytes.
+- **Screenshots** (`screenshot feeds`, `screenshot chart SYMBOL`) check that the app looks healthy. They switch the
+  trader's own app window to that view and leave it there, so they need a `trader` key. By default they print the
+  window's health (view, market, window state, live link, size, scale, time); `--json` adds the PNG in base64;
+  `--output FILE` writes the PNG on this computer under the export rules, and with `--json` prints `path` and `bytes`
+  instead of the base64.
 
 ## Exit codes
 
@@ -93,13 +100,13 @@ mt4-quote-bridge requests show <request-id>
 | 4 | Forbidden (403): readonly key, Demo trading off, symbol not tradable |
 | 5 | Not found (404) |
 | 6 | Ambiguous symbol or login; the candidates are listed |
-| 7 | Conflict (409): cross-broker market, preview expired or invalidated, account unresolved, a real account, no single ready executor |
+| 7 | Conflict (409): cross-broker market, preview expired or invalidated, account unresolved, a real account, no single ready executor, a dialog open in the app window (`window-busy`), no feed for a chart (`no-feed`) |
 | 8 | Invalid trading or indicator values (422) |
-| 9 | Source unavailable or the terminal did not answer in time (503, 504); not an order failure |
+| 9 | Source or app window unavailable, or the terminal or a screenshot did not answer in time (503, 504); not an order failure |
 | 10 | The request's outcome is unknown: never retry; check MetaTrader, then review |
 | 11 | The request failed definitively |
 | 12 | The request was sent and has no definitive result yet |
-| 13 | The export's output file exists and `--force` was not given |
+| 13 | The output file of an export or screenshot exists and `--force` was not given |
 
 ## Development
 

@@ -13,6 +13,7 @@ import {
   listCollection,
   MARKET_HELP,
   marketOptions,
+  outputExists,
   pageOptions,
   positiveInt,
   TIME_HELP,
@@ -265,12 +266,7 @@ export function marketsCommand() {
           );
         } catch (e) {
           if ((e as NodeJS.ErrnoException).code === "EEXIST")
-            throw new CliError(
-              `${file} exists. Choose another --output, or add --force to replace it.`,
-              EXIT.exists,
-              "output-exists",
-              { path: file }
-            );
+            throw outputExists(file);
           throw new CliError(`Cannot write ${file}: ${(e as Error).message}`);
         }
         try {

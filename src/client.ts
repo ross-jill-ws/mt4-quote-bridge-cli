@@ -30,7 +30,7 @@ export const EXIT = {
   failed: 11,
   /** The request was sent and has no definitive result yet: GET it again with `requests show`. */
   dispatching: 12,
-  /** An export's output file exists and --force was not given. */
+  /** An output file (an export, a screenshot) exists and --force was not given. */
   exists: 13,
 } as const;
 

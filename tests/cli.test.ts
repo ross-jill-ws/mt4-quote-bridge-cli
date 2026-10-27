@@ -4,7 +4,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import {
   createServer,
   type IncomingMessage,
@@ -500,7 +501,7 @@ test("mutations need explicit accounts and confirmation: refused arguments send 
     );
     const help = await run(["--help"]);
     assert.equal(help.code, 0);
-    assert.match(help.out, /13  export file exists/);
+    assert.match(help.out, /13  output file exists/);
     assert.equal(help.err, "");
   } finally {
     server.close();
@@ -976,6 +977,181 @@ test("auth login takes only an API key, verifies it and saves its new scope name
     assert.equal(shown.code, 0);
     assert.ok(!shown.out.includes(key), "the key is never printed");
     assert.equal(JSON.parse(shown.out).data.apiKey, "config file");
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
+/** A screenshot answer as the app gives it; `png` is a real PNG signature, so the decoded file can be checked. */
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+const SHOT = {
+  view: "feeds",
+  window: "hidden",
+  width: 1800,
+  height: 1200,
+  scale: 1.5,
+  live: "live",
+  capturedAt: "2027-01-15T08:00:00.000Z",
+  contentType: "image/png",
+  png: PNG.toString("base64"),
+};
+/** The directory, plus screenshots of Feeds and of any market's chart. */
+const screenshots: Handler = (req, body, send) => {
+  const url = new URL(req.url!, "http://x");
+  if (url.pathname === "/api/v1/screenshots/feeds")
+    return send(200, { data: SHOT, meta: {} });
+  const chart = /^\/api\/v1\/screenshots\/charts\/(.+)$/.exec(url.pathname);
+  const market = MARKETS.find((m) => m.id === chart?.[1]);
+  const byId = /^\/api\/v1\/markets\/(.+)$/.exec(url.pathname);
+  const known = MARKETS.find((m) => m.id === byId?.[1]);
+  if (known) return send(200, { data: known, meta: {} });
+  if (market)
+    return send(200, {
+      data: {
+        ...SHOT,
+        view: "chart",
+        marketId: market.id,
+        brokerServer: market.brokerServer,
+        symbol: market.symbol,
+      },
+      meta: {},
+    });
+  directory(req, body, send);
+};
+
+test("screenshot feeds prints the window's health, never the image's base64", async () => {
+  const server = await stub(screenshots);
+  const { run, cleanup } = await runner(server.origin);
+  try {
+    const shot = await run(["screenshot", "feeds"]);
+    assert.equal(shot.code, 0, shot.err);
+    assert.equal(
+      shot.out,
+      [
+        "View:    feeds",
+        "Market:  —",
+        "Window:  hidden",
+        "Live:    live",
+        "Size:    1800 × 1200",
+        "Scale:   1.5",
+        "Time:    2027-01-15T08:00:00.000Z",
+        "",
+      ].join("\n")
+    );
+    assert.deepEqual(server.seen, ["GET /api/v1/screenshots/feeds"]);
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
+test("screenshot chart names its market exactly; ambiguity exits 6 before the window is touched; --json carries the base64", async () => {
+  const server = await stub(screenshots);
+  const { run, cleanup } = await runner(server.origin);
+  try {
+    const ambiguous = await run(["screenshot", "chart", "EURUSD", "--json"]);
+    assert.equal(ambiguous.code, EXIT.ambiguous);
+    assert.deepEqual(
+      JSON.parse(ambiguous.err).error.details.candidates.map((c: any) => c.marketId),
+      ["m-demo", "m-real"]
+    );
+    assert.ok(!server.seen.some((s) => s.includes("/screenshots/")), "no screenshot was asked");
+
+    const table = await run(["screenshot", "chart", "EURUSD", "--broker", "Demo-Broker"]);
+    assert.equal(table.code, 0, table.err);
+    assert.match(table.out, /^View:    chart\nMarket:  EURUSD · Demo-Broker\n/);
+    assert.doesNotMatch(table.out, new RegExp(SHOT.png.slice(0, 8)));
+
+    const json = await run(["screenshot", "chart", "--market-id", "m-gbp", "--json"]);
+    assert.equal(json.code, 0, json.err);
+    const answer = JSON.parse(json.out);
+    assert.equal(answer.data.symbol, "GBPUSD");
+    assert.equal(answer.data.png, SHOT.png);
+    assert.equal(server.seen.at(-1), "GET /api/v1/screenshots/charts/m-gbp");
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
+test("screenshot --output writes the PNG here, never replaces a file without --force, and --json reports path and bytes", async () => {
+  const server = await stub(screenshots);
+  const { run, dir, cleanup } = await runner(server.origin);
+  try {
+    const file = join(dir, "feeds.png");
+    const saved = await run(["screenshot", "feeds", "--output", file, "--json"]);
+    assert.equal(saved.code, 0, saved.err);
+    assert.deepEqual(await readFile(file), PNG);
+    const { png: _png, ...healthFields } = SHOT;
+    assert.deepEqual(JSON.parse(saved.out), {
+      data: { ...healthFields, path: file, bytes: PNG.length },
+      meta: {},
+    });
+
+    await writeFile(file, "keep me");
+    const asked = server.seen.length;
+    const exists = await run(["screenshot", "feeds", "--output", file, "--json"]);
+    assert.equal(exists.code, EXIT.exists);
+    const error = JSON.parse(exists.err).error;
+    assert.deepEqual([error.code, error.details.path], ["output-exists", file]);
+    assert.equal(await readFile(file, "utf8"), "keep me");
+    assert.equal(server.seen.length, asked, "the window is not touched for a file that would be refused");
+
+    const forced = await run(["screenshot", "chart", "GBPUSD", "--output", "chart.png", "--force"]);
+    assert.equal(forced.code, 0, forced.err);
+    assert.deepEqual(await readFile(join(dir, "chart.png")), PNG);
+    assert.match(forced.out, /^View:    chart\n/);
+    // A forced write that cannot replace the target (here a folder) never removes what was there and leaves no file.
+    await mkdir(join(dir, "folder.png"));
+    const blocked = await run(["screenshot", "feeds", "--output", "folder.png", "--force"]);
+    assert.equal(blocked.code, EXIT.error);
+    assert.match(blocked.err, /^error: Cannot write .*folder\.png/);
+    assert.ok(existsSync(join(dir, "folder.png")), "the existing folder is kept");
+    assert.deepEqual(
+      (await readdir(dir)).filter((f) => f.includes("folder.png")),
+      ["folder.png"],
+      "no temporary file is left"
+    );
+    assert.ok(
+      forced.out.endsWith(`\nPath:    ${join(dir, "chart.png")}\nBytes:   ${PNG.length}\n`),
+      forced.out
+    );
+  } finally {
+    server.close();
+    await cleanup();
+  }
+});
+
+test("screenshot refusals print the app's words, exit with the codes --help lists and leave no file", async () => {
+  const refusals: [string, number, string, number][] = [
+    ["insufficient-scope", 403, "A screenshot switches the app window's view: use a key with the trader scope.", EXIT.forbidden],
+    ["window-busy", 409, "The order dialog is open in the app window.", EXIT.conflict],
+    ["no-feed", 409, "No terminal streams this market, so the app has no chart of it.", EXIT.conflict],
+    ["window-unavailable", 503, "There is no app window to capture.", EXIT.unavailable],
+    ["screenshot-timeout", 504, "The app window was not captured within 10 seconds.", EXIT.unavailable],
+  ];
+  let refusal = refusals[0];
+  const server = await stub((req, body, send) =>
+    req.url!.startsWith("/api/v1/screenshots/")
+      ? send(refusal[1], { error: { code: refusal[0], message: refusal[2], details: null } })
+      : screenshots(req, body, send)
+  );
+  const { run, dir, cleanup } = await runner(server.origin);
+  const help = helpOf(
+    buildProgram().commands.find((c) => c.name() === "screenshot")!.commands.find((c) => c.name() === "chart")!
+  );
+  try {
+    for (refusal of refusals) {
+      const [code, , message, exit] = refusal;
+      const file = join(dir, `${code}.png`);
+      const out = await run(["screenshot", "chart", "GBPUSD", "--output", file]);
+      assert.equal(out.code, exit, code);
+      assert.equal(out.err, `error: ${message} (${code})\n`);
+      assert.equal(out.out, "");
+      assert.ok(!existsSync(file), `${code} leaves no file`);
+      assert.match(help, new RegExp(`\\n +${code} +exit ${exit} `), `--help lists ${code}`);
+    }
   } finally {
     server.close();
     await cleanup();
