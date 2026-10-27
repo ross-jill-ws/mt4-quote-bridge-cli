@@ -90,10 +90,10 @@ mt4-quote-bridge requests show <request-id>
 | 1 | Other error: the app is unreachable or answered unexpectedly |
 | 2 | Usage error, or the app refused a malformed value (400) |
 | 3 | Not signed in, or the API key is invalid or revoked (401) |
-| 4 | Forbidden (403): readonly key, Demo trading off, real account, symbol not tradable |
+| 4 | Forbidden (403): readonly key, Demo trading off, symbol not tradable |
 | 5 | Not found (404) |
 | 6 | Ambiguous symbol or login; the candidates are listed |
-| 7 | Conflict (409): cross-broker market, preview expired or invalidated, account unresolved, no single ready executor |
+| 7 | Conflict (409): cross-broker market, preview expired or invalidated, account unresolved, a real account, no single ready executor |
 | 8 | Invalid trading or indicator values (422) |
 | 9 | Source unavailable or the terminal did not answer in time (503, 504); not an order failure |
 | 10 | The request's outcome is unknown: never retry; check MetaTrader, then review |

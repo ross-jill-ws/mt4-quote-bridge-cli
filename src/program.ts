@@ -20,12 +20,13 @@ const { version } = createRequire(import.meta.url)("../package.json") as {
 export const EXIT_HELP = `Exit codes:
   0  success                     7  conflict: cross-broker market, preview
   1  other error, unreachable       expired or invalidated, account unresolved,
-  2  usage or malformed value       no single ready executor (409)
-  3  not signed in / bad key     8  invalid trading or indicator values (422)
-  4  forbidden: readonly key,    9  source unavailable or read timeout (503/504)
-     trading off, real account  10  request outcome UNKNOWN: never retry
-  5  not found (404)            11  request failed (refused by MetaTrader/EA)
-  6  ambiguous symbol or login  12  request sent, no definitive result yet
+  2  usage or malformed value       real account, no single ready executor
+  3  not signed in / bad key        (409)
+  4  forbidden: readonly key,    8  invalid trading or indicator values (422)
+     trading off                 9  source unavailable or read timeout (503/504)
+  5  not found (404)            10  request outcome UNKNOWN: never retry
+  6  ambiguous symbol or login  11  request failed (refused by MetaTrader/EA)
+                                12  request sent, no definitive result yet
                                 13  export file exists (no --force)`;
 
 /** `json`: usage errors are reported once, as the error envelope, instead of commander's text. */
