@@ -21,6 +21,66 @@ export const TIMEFRAMES = [
   "MN1",
 ] as const;
 
+/** A help section: its title, then each line of its body indented two spaces. */
+export const section = (title: string, body: string) =>
+  `\n${title}:\n${body
+    .split("\n")
+    .map((line) => (line ? `  ${line}` : line))
+    .join("\n")}`;
+
+/**
+ * A subcommand's one line for its parent's list, and in its own help that line and when to reach for it (`when`
+ * stays one paragraph per line: commander wraps it).
+ */
+export function describe(cmd: Command, summary: string, when: string) {
+  return cmd.summary(summary).description(`${summary}\n\n${when}`);
+}
+
+/** Command lines, each after the program's name. */
+const commandLines = (lines: string[]) =>
+  lines.map((line) => `mt4-quote-bridge ${line}`).join("\n");
+
+/**
+ * A subcommand's help after its options: what it prints, examples and related commands. The program adds the exit
+ * codes after these. Each section is its own help text, so a blank line parts them.
+ */
+export function guide(
+  cmd: Command,
+  g: { output?: string; examples: string[]; seeAlso?: string[] }
+) {
+  if (g.output !== undefined)
+    cmd.addHelpText("after", section("Output", g.output));
+  cmd.addHelpText("after", section("Examples", commandLines(g.examples)));
+  if (g.seeAlso !== undefined)
+    cmd.addHelpText("after", section("See also", commandLines(g.seeAlso)));
+  return cmd;
+}
+
+/**
+ * A command family: its one line in the program's list, what it covers, and after its subcommands which one fits
+ * which task and that each has its own --help.
+ */
+export function familyGuide(
+  cmd: Command,
+  summary: string,
+  about: string,
+  which: string,
+  examples: string[]
+) {
+  return describe(cmd, summary, about)
+    .addHelpText("after", section("Which subcommand", which))
+    .addHelpText("after", section("Examples", commandLines(examples)))
+    .addHelpText(
+      "after",
+      section(
+        "More help",
+        `Every subcommand has its own --help: arguments, options, output, examples
+and exit codes. Read it before a subcommand's first use:
+  mt4-quote-bridge ${cmd.name()} <subcommand> --help`
+      )
+    );
+}
+
 export function jsonOption(cmd: Command) {
   return cmd.option(
     "--json",

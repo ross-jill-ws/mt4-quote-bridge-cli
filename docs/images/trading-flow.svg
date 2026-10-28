@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="560" viewBox="0 0 980 560" role="img" aria-labelledby="title desc">
+  <title id="title">Preview, approve, execute once</title>
+  <desc id="desc">A trade starts with a preview command, which sends nothing and lasts 30 seconds. The account holder approves that exact preview; then requests execute with --confirm sends it once. The exit status says what happened: 0 succeeded, 11 failed, 12 sent with no result yet (read it later with requests show), 10 unknown (check MetaTrader, then requests review). An expired or changed preview exits 7 and needs a new preview and approval. A lost answer is answered by requests show, never by executing again.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2c3e50"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; fill: #2c3e50; }
+      .title { font-size: 18px; font-weight: 700; }
+      .b { font-size: 13.5px; font-weight: 700; }
+      .s { font-size: 12.5px; fill: #34495e; }
+      .m { font-family: Consolas, Menlo, "Courier New", monospace; font-size: 12px; fill: #2c3e50; }
+      .w { font-size: 13.5px; font-weight: 700; fill: #ffffff; }
+      .ws { font-size: 12px; fill: #ffffff; }
+      .code { font-size: 20px; font-weight: 800; fill: #ffffff; }
+      .flow { stroke: #2c3e50; stroke-width: 1.8; fill: none; }
+      .back { stroke: #7f8c8d; stroke-width: 1.5; fill: none; stroke-dasharray: 6 4; }
+    </style>
+  </defs>
+  <rect width="980" height="560" fill="#ffffff"/>
+  <text x="20" y="30" class="title">Every trade: preview → the account holder approves → execute once</text>
+
+  <!-- preview -->
+  <rect x="20" y="56" width="270" height="132" rx="8" fill="#e8f4f8" stroke="#3498db"/>
+  <text x="34" y="78" class="b">1  Preview (sends nothing)</text>
+  <text x="34" y="100" class="m">orders preview | modify | cancel</text>
+  <text x="34" y="117" class="m">positions modify | close</text>
+  <text x="34" y="141" class="s">Prints the request ID, the exact</text>
+  <text x="34" y="158" class="s">order, limits, estimates, warnings.</text>
+  <text x="34" y="177" class="s" style="fill:#c0392b">Valid for 30 seconds.</text>
+
+  <line x1="292" y1="122" x2="350" y2="122" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- approve -->
+  <rect x="354" y="56" width="270" height="132" rx="8" fill="#fef5e7" stroke="#f39c12"/>
+  <text x="368" y="78" class="b">2  The account holder approves</text>
+  <text x="368" y="102" class="s">They see the whole preview and say</text>
+  <text x="368" y="119" class="s">yes to that exact one. An agent never</text>
+  <text x="368" y="136" class="s">approves on their behalf, and --confirm</text>
+  <text x="368" y="153" class="s">only records their approval.</text>
+
+  <line x1="626" y1="122" x2="684" y2="122" class="flow" marker-end="url(#arrow)"/>
+
+  <!-- execute -->
+  <rect x="688" y="56" width="272" height="132" rx="8" fill="#2c3e50"/>
+  <text x="702" y="78" class="w">3  Execute, once</text>
+  <text x="702" y="101" style="font-family:Consolas,Menlo,monospace;font-size:12px;fill:#f8c471">requests execute ID --confirm</text>
+  <text x="702" y="125" class="ws">Posts once, never retries; then only</text>
+  <text x="702" y="142" class="ws">reads the request until MetaTrader</text>
+  <text x="702" y="159" class="ws">answers or --wait passes (25 s).</text>
+
+  <!-- expired back-loop -->
+  <path d="M760 190 C 760 230, 160 230, 155 192" class="back" marker-end="url(#arrow)"/>
+  <text x="460" y="236" text-anchor="middle" class="s"><tspan style="font-weight:700;fill:#c0392b">exit 7</tspan>  preview expired or changed → preview again, approve again</text>
+
+  <!-- outcomes -->
+  <line x1="824" y1="190" x2="824" y2="262" class="flow"/>
+  <line x1="122" y1="262" x2="824" y2="262" class="flow"/>
+  <line x1="122" y1="262" x2="122" y2="284" class="flow" marker-end="url(#arrow)"/>
+  <line x1="364" y1="262" x2="364" y2="284" class="flow" marker-end="url(#arrow)"/>
+  <line x1="606" y1="262" x2="606" y2="284" class="flow" marker-end="url(#arrow)"/>
+  <line x1="848" y1="262" x2="848" y2="284" class="flow" marker-end="url(#arrow)"/>
+
+  <rect x="20" y="288" width="210" height="150" rx="8" fill="#27ae60"/>
+  <text x="34" y="316" class="code">0</text><text x="58" y="314" class="w">succeeded</text>
+  <text x="34" y="340" class="ws">MetaTrader did it.</text>
+  <text x="34" y="358" class="ws">Report the ticket.</text>
+
+  <rect x="262" y="288" width="210" height="150" rx="8" fill="#e74c3c"/>
+  <text x="276" y="316" class="code">11</text><text x="306" y="314" class="w">failed</text>
+  <text x="276" y="340" class="ws">MetaTrader or the EA refused</text>
+  <text x="276" y="358" class="ws">it; nothing changed. Report</text>
+  <text x="276" y="376" class="ws">its code and message.</text>
+
+  <rect x="504" y="288" width="210" height="150" rx="8" fill="#f39c12"/>
+  <text x="518" y="316" class="code">12</text><text x="548" y="314" class="w">dispatching</text>
+  <text x="518" y="340" class="ws">Sent; no result yet.</text>
+  <text x="518" y="358" class="ws">Read it later:</text>
+  <text x="518" y="378" style="font-family:Consolas,Menlo,monospace;font-size:12px;fill:#ffffff">requests show ID</text>
+
+  <rect x="746" y="288" width="214" height="150" rx="8" fill="#8e44ad"/>
+  <text x="760" y="316" class="code">10</text><text x="790" y="314" class="w">unknown</text>
+  <text x="760" y="340" class="ws">Stop. The account is blocked.</text>
+  <text x="760" y="358" class="ws">The holder checks MT4's open</text>
+  <text x="760" y="376" class="ws">orders and history, then:</text>
+  <text x="760" y="396" style="font-family:Consolas,Menlo,monospace;font-size:11.5px;fill:#ffffff">requests review ID</text>
+  <text x="760" y="412" style="font-family:Consolas,Menlo,monospace;font-size:11.5px;fill:#ffffff">  --note "…" --acknowledge</text>
+
+  <!-- never -->
+  <rect x="20" y="460" width="940" height="82" rx="8" fill="#fdedec" stroke="#e74c3c"/>
+  <text x="36" y="485" class="b" style="fill:#c0392b">A request ID is executed at most once.</text>
+  <text x="36" y="507" class="s">A lost answer (exit 1 after the send), a timeout, exit 12 or exit 10 is answered by reading: requests show ID.</text>
+  <text x="36" y="527" class="s">A new execute or a new preview of the same order could open a second trade.</text>
+</svg>

@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="980" height="720" viewBox="0 0 980 720" role="img" aria-labelledby="title desc">
+  <title id="title">What a screenshot prints</title>
+  <desc id="desc">Four terminals: with no flags the CLI prints the window's health; with --json the envelope carries the PNG in base64; with --output it writes the PNG and adds Path and Bytes; with --output and --json it prints path and bytes instead of the base64. An existing output file without --force exits 13 and leaves the window alone.</desc>
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; fill: #2c3e50; }
+      .title { font-size: 18px; font-weight: 700; }
+      .label { font-size: 14px; font-weight: 700; }
+      .note { font-size: 12.5px; fill: #34495e; }
+      .t { white-space: pre; font-family: Consolas, Menlo, "Courier New", monospace; font-size: 12.5px; fill: #ecf0f1; }
+      .p { fill: #85c1e9; }
+      .k { fill: #f8c471; }
+      .g { fill: #82e0aa; }
+      .w { fill: #f5b041; }
+      .dim { fill: #aab7b8; }
+      .err { font-family: Consolas, Menlo, "Courier New", monospace; font-size: 12.5px; fill: #c0392b; }
+    </style>
+  </defs>
+  <rect width="980" height="720" fill="#ffffff"/>
+  <text x="20" y="32" class="title">Four ways to run a screenshot: what stdout gets, and what is written</text>
+
+  <!-- A: no flags -->
+  <text x="20" y="64" class="label">No flags: the window's health only</text>
+  <rect x="20" y="74" width="460" height="256" rx="8" fill="#1e2a36"/>
+  <circle cx="36" cy="88" r="4.5" fill="#e74c3c"/><circle cx="50" cy="88" r="4.5" fill="#f39c12"/><circle cx="64" cy="88" r="4.5" fill="#27ae60"/>
+  <text x="34" y="116" class="t"><tspan class="p">$</tspan> mt4-quote-bridge screenshot chart EURUSD \</text>
+  <text x="34" y="133" class="t">    --broker EasyForex-Demo</text>
+  <text x="34" y="157" class="t"><tspan class="k">View:</tspan>    chart</text>
+  <text x="34" y="174" class="t"><tspan class="k">Market:</tspan>  EURUSD · EasyForex-Demo</text>
+  <text x="34" y="191" class="t"><tspan class="k">Window:</tspan>  hidden</text>
+  <text x="34" y="208" class="t"><tspan class="k">Live:</tspan>    <tspan class="g">live</tspan></text>
+  <text x="34" y="225" class="t"><tspan class="k">Size:</tspan>    1800 × 1200</text>
+  <text x="34" y="242" class="t"><tspan class="k">Scale:</tspan>   1.5</text>
+  <text x="34" y="259" class="t"><tspan class="k">Time:</tspan>    2027-01-15T08:00:00.000Z</text>
+  <text x="34" y="292" class="t dim">No image is printed and no file is written.</text>
+  <text x="34" y="309" class="t dim">Use it to check health from a script or an agent.</text>
+
+  <!-- B: json -->
+  <text x="500" y="64" class="label">--json: the app's answer, PNG in base64</text>
+  <rect x="500" y="74" width="460" height="256" rx="8" fill="#1e2a36"/>
+  <circle cx="516" cy="88" r="4.5" fill="#e74c3c"/><circle cx="530" cy="88" r="4.5" fill="#f39c12"/><circle cx="544" cy="88" r="4.5" fill="#27ae60"/>
+  <text x="514" y="116" class="t"><tspan class="p">$</tspan> mt4-quote-bridge screenshot chart EURUSD \</text>
+  <text x="514" y="133" class="t">    --broker EasyForex-Demo --json</text>
+  <text x="514" y="157" class="t">{ "data": {</text>
+  <text x="514" y="174" class="t">    "view": "chart", "marketId": "&lt;market-id&gt;",</text>
+  <text x="514" y="191" class="t">    "brokerServer": "EasyForex-Demo",</text>
+  <text x="514" y="208" class="t">    "symbol": "EURUSD", "window": "hidden",</text>
+  <text x="514" y="225" class="t">    "width": 1800, "height": 1200, "scale": 1.5,</text>
+  <text x="514" y="242" class="t">    "live": "live", "capturedAt": "2027-01-15…",</text>
+  <text x="514" y="259" class="t">    "contentType": "image/png",</text>
+  <text x="514" y="276" class="t">    <tspan class="w">"png": "iVBORw0KGgoAAAANSUhEUgAABwg…"</tspan></text>
+  <text x="514" y="293" class="t">  }, "meta": {} }</text>
+  <text x="514" y="316" class="t w">↑ the whole image: often several hundred KB</text>
+
+  <!-- C: output file -->
+  <text x="20" y="364" class="label">--output FILE: writes the PNG here, adds Path and Bytes</text>
+  <rect x="20" y="374" width="460" height="256" rx="8" fill="#1e2a36"/>
+  <circle cx="36" cy="388" r="4.5" fill="#e74c3c"/><circle cx="50" cy="388" r="4.5" fill="#f39c12"/><circle cx="64" cy="388" r="4.5" fill="#27ae60"/>
+  <text x="34" y="416" class="t"><tspan class="p">$</tspan> mt4-quote-bridge screenshot chart EURUSD \</text>
+  <text x="34" y="433" class="t">    --broker EasyForex-Demo --output chart.png</text>
+  <text x="34" y="457" class="t"><tspan class="k">View:</tspan>    chart</text>
+  <text x="34" y="474" class="t"><tspan class="k">Market:</tspan>  EURUSD · EasyForex-Demo</text>
+  <text x="34" y="491" class="t"><tspan class="k">Window:</tspan>  hidden</text>
+  <text x="34" y="508" class="t"><tspan class="k">Live:</tspan>    <tspan class="g">live</tspan></text>
+  <text x="34" y="525" class="t"><tspan class="k">Size:</tspan>    1800 × 1200</text>
+  <text x="34" y="542" class="t"><tspan class="k">Scale:</tspan>   1.5</text>
+  <text x="34" y="559" class="t"><tspan class="k">Time:</tspan>    2027-01-15T08:00:00.000Z</text>
+  <text x="34" y="576" class="t"><tspan class="k">Path:</tspan>    <tspan class="g">C:\work\chart.png</tspan></text>
+  <text x="34" y="593" class="t"><tspan class="k">Bytes:</tspan>   <tspan class="g">412337</tspan></text>
+  <!-- file icon -->
+  <path d="M398 470 h44 l16 16 v62 h-60 z" fill="#ecf0f1"/>
+  <path d="M442 470 v16 h16" fill="#bdc3c7"/>
+  <rect x="406" y="498" width="44" height="30" fill="#d6eaf8"/>
+  <polyline points="408,522 418,512 426,518 436,504 448,510" fill="none" stroke="#27ae60" stroke-width="2"/>
+  <text x="428" y="568" text-anchor="middle" class="t g">chart.png</text>
+
+  <!-- D: output file and json -->
+  <text x="500" y="364" class="label">--output FILE --json: path and bytes, no base64</text>
+  <rect x="500" y="374" width="460" height="256" rx="8" fill="#1e2a36"/>
+  <circle cx="516" cy="388" r="4.5" fill="#e74c3c"/><circle cx="530" cy="388" r="4.5" fill="#f39c12"/><circle cx="544" cy="388" r="4.5" fill="#27ae60"/>
+  <text x="514" y="416" class="t"><tspan class="p">$</tspan> mt4-quote-bridge screenshot chart EURUSD \</text>
+  <text x="514" y="433" class="t">    --broker EasyForex-Demo --output chart.png --json</text>
+  <text x="514" y="457" class="t">{ "data": {</text>
+  <text x="514" y="474" class="t">    "view": "chart", "marketId": "&lt;market-id&gt;",</text>
+  <text x="514" y="491" class="t">    "brokerServer": "EasyForex-Demo",</text>
+  <text x="514" y="508" class="t">    "symbol": "EURUSD", "window": "hidden",</text>
+  <text x="514" y="525" class="t">    "width": 1800, "height": 1200, "scale": 1.5,</text>
+  <text x="514" y="542" class="t">    "live": "live", "capturedAt": "2027-01-15…",</text>
+  <text x="514" y="559" class="t">    "contentType": "image/png",</text>
+  <text x="514" y="576" class="t">    <tspan class="g">"path": "C:\\work\\chart.png", "bytes": 412337</tspan></text>
+  <text x="514" y="593" class="t">  }, "meta": {} }</text>
+  <text x="514" y="616" class="t g">↑ best for agents: parse it, then open the file</text>
+
+  <!-- refusal band -->
+  <rect x="20" y="650" width="940" height="56" rx="8" fill="#fdedec" stroke="#e74c3c"/>
+  <text x="36" y="672" class="err">$ mt4-quote-bridge screenshot feeds --output feeds.png    # feeds.png exists, no --force</text>
+  <text x="36" y="693" class="err">error: C:\work\feeds.png exists. Choose another --output, or add --force to replace it. (output-exists) → exit 13</text>
+</svg>

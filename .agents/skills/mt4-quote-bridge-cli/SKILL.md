@@ -1,51 +1,67 @@
 ---
 name: mt4-quote-bridge-cli
-description: Read MetaTrader market and account data, and prepare demo trades, with the `mt4-quote-bridge` CLI for QuoteBridge. Use when asked for MT4 quotes, candles, indicator values, history exports, Funds, positions or pending orders, to place, modify, close or cancel a demo trade, or to check that the QuoteBridge app looks healthy.
+description: Read MetaTrader market and account data, prepare demo trades and check QuoteBridge's health with the `mt4-quote-bridge` CLI. Use when asked for MT4 quotes, candles, indicator values, history exports, Funds, positions or pending orders; to place, modify, close or cancel a demo trade; or to see whether the QuoteBridge app looks healthy.
 ---
 
 # mt4-quote-bridge CLI
 
-The CLI speaks QuoteBridge's REST API v1. Every command's `--help` is the reference for arguments, JSON shape and exit codes; read it before a command's first use in a session. This skill covers what the help cannot: the identity model and the trading protocol.
+The CLI speaks QuoteBridge's REST API v1. Its `--help` is the reference, at every level; this skill says which command to reach for and the rules the help cannot enforce.
 
 If `mt4-quote-bridge` is not on PATH, run `node dist/cli.js` from this repository after `npm run build`.
 
-## 1. Check the connection
+## 1. Let `--help` lead
 
-Run `mt4-quote-bridge auth status --json`. Exit `0` means signed in; note `key.scope` (`readonly` reads, `trader` may also preview, execute and review).
+Every command and every subcommand has `--help`. Drill down only as far as the task needs:
 
-Otherwise hand over to the human: exit `3` means they create a key in the QuoteBridge app window (Settings › API keys) and run `auth login`; exit `1` means the app is unreachable, so confirm it is running and check `config show` with them. Keys, settings, demo-trading enablement and caps belong to the app window alone.
+```sh
+mt4-quote-bridge --help                    # "Which command": a task → its command
+mt4-quote-bridge <command> --help          # "Which subcommand": when to use each, examples
+mt4-quote-bridge <command> <sub> --help    # arguments, options, Output (--json shape), Examples, exit codes
+```
 
-## 2. Name things exactly
+Read a subcommand's `--help` before its first use in a session, and take flags, value formats and the JSON shape from it rather than from memory.
 
-- A **market** is a broker server plus a symbol; an **account** is a broker server plus a login. Both are exact and case-sensitive.
-- Discover with `markets list --json` and `accounts list --json`, then pass what they return: `SYMBOL --broker <brokerServer>` or `--market-id`, and `--account <id>`.
+## 2. Check the connection
+
+Run `mt4-quote-bridge auth status --json`. Exit `0` means signed in; note `data.key.scope`: `readonly` reads; `trader` also takes screenshots and previews, executes and reviews demo trades.
+
+Otherwise hand over to the human: exit `3` means they create a key in the QuoteBridge app window (Settings › API keys) and run `auth login`; exit `1` means the app is unreachable, so confirm it is running and check `config show` with them. Keys, settings, Demo trading and caps belong to the app window alone.
+
+## 3. Pick the command
+
+| The user wants | Command |
+| --- | --- |
+| which markets or accounts exist | `markets list`, `accounts list` |
+| the price now | `markets quote SYMBOL` |
+| bars | `markets candles SYMBOL --timeframe TF` |
+| every recorded tick | `markets samples SYMBOL` |
+| how much history there is, or a CSV/HST file | `markets history SYMBOL`, `markets export …` |
+| indicator values | `indicators list` → `indicators show PACKAGE` → `markets indicator PACKAGE SYMBOL …` |
+| money, margin | `accounts funds --account A` |
+| lot step, stop level, margin per lot | `accounts conditions SYMBOL --account A` |
+| open trades, pending orders | `positions list`, `orders list` (`--account A`) |
+| a new trade or a change to one | a preview command, then section 6 |
+| what happened to a request | `requests show ID` |
+| to see the app, or whether it looks healthy | `screenshot feeds`, `screenshot chart SYMBOL`, then section 5 |
+| why a market is quiet | `markets show SYMBOL`, `terminals list`, `terminals feeds ID` |
+
+## 4. Name things exactly, read JSON
+
+- A **market** is a broker server plus a symbol; an **account** is a broker server plus a login. Both are exact and case-sensitive. Discover with `markets list --json` and `accounts list --json`, then pass what they return: `SYMBOL --broker <brokerServer>` or `--market-id`, and `--account <id>`.
 - Exit `6` lists the candidates in `error.details.candidates`. Ask the user which one they mean, then rerun with the exact identity. The account the user names is the account you use: every account-scoped command carries its own `--account`.
-- Pass `--json` whenever you parse output. Prices, lots and money are decimal strings; times are UTC with a `brokerTime` sibling.
+- Pass `--json` whenever you parse output: results on stdout, errors as `{ error: { code, message, details } }` on stderr. Prices, lots and money are decimal strings; times are UTC with a `brokerTime` sibling.
+- Before reporting a value, read its freshness: a quote's `state`/`stale`, Funds' and positions' `state` (`fresh`, `stale`, `unavailable`). Say so when it is not fresh.
 
-## 3. Screenshots move the trader's window
+## 5. Screenshots move the user's window
 
-`screenshot feeds` and `screenshot chart SYMBOL` capture the user's own app window. Use them to check that the app looks healthy (feeds streaming, a chart drawn, the live link up), not to read data: quotes, candles and indicator values come from the `markets` commands.
+Before any `screenshot` command, read [references/screenshots.md](references/screenshots.md). A screenshot switches the user's own app window to Feeds or a chart and leaves it there; numbers come from the data commands, never from a picture.
 
-- A screenshot switches the window to Feeds or to that market's chart and leaves it there, even when it is minimised or in the tray. Take one when the user asks to see the app or when data looks wrong, not routinely, and tell them the window's view changed.
-- It needs a `trader` key; a `readonly` key exits `4`. Exit `7` `window-busy` means a dialog is open in the window: tell the user, don't retry until they close it. Exit `7` `no-feed`: no terminal streams that market. Exit `9`: no window to capture or the capture timed out.
-- To look at the image, pass `--output <file>` (add `--force` to replace one); `--json` then reports `path` and `bytes`. Without `--output`, `--json` carries the PNG in base64.
+## 6. Trading needs the user's explicit approval of each preview
 
-## 4. Trade only with explicit authorization
+Before any preview (`orders preview|modify|cancel`, `positions modify|close`), `requests execute` or `requests review`, read [references/trading.md](references/trading.md). The one rule to hold even before reading it: run `requests execute <id> --confirm` only after the user approves that exact preview in this conversation, and answer every uncertain outcome with `requests show <id>`, never with a second execute or preview.
 
-Trading is demo-only and always the user's decision. The agent prepares previews; the user approves each one.
+## 7. On an error exit
 
-1. Act only when the user asks for a specific trade: account, market, side, size and stops come from them. Fill nothing in on their behalf. Stops take the user's form: prices (`--sl`/`--tp`), points from the entry (`--sl-points`/`--tp-points`) or a risk plan (`--risk-*` with `--reward-ratio`), one form per order.
-2. Preview with `--json` (`orders preview`, `orders modify|cancel`, `positions modify|close`). A preview sends nothing.
-3. Show the user the preview: account, normalized intent, limits, estimates and every warning (an outside trade, missing stops). It expires 30 seconds after `createdAt`.
-4. Run `requests execute <request-id> --confirm` only after the user explicitly approves that exact preview in this conversation. `--confirm` records their approval; it never replaces it. An expired or changed preview (exit `7`) needs a fresh preview and fresh approval.
-5. Read the exit status and report it:
-   - `0` succeeded: report the ticket.
-   - `11` failed: report MetaTrader's code and message.
-   - `12` sent, no result yet: check later with `requests show <request-id>`.
-   - `10` unknown: stop. Report it and ask the user to check MetaTrader's open orders and account history. The account stays blocked until a result arrives or the user reviews it.
+For any exit code other than `0`, read [references/errors.md](references/errors.md) for what it means and who acts next. Every subcommand's `--help` also ends with its exit codes.
 
-Every request ID is executed at most once. To learn what happened to one, read it with `requests show <request-id>`: a new preview or execute could open a second trade. A lost answer, a timeout and an unknown outcome are all answered by reading, never by sending again.
-
-Review (`requests review <id> --note "…" --acknowledge`) records what the user found in MetaTrader. Run it only with the user's own note after they say they checked; it lifts the block and never resends.
-
-Real accounts are read-only: their exit `7` `executor-real-account` is final. Exit `4` `trading-disabled` means Demo trading is off in the app window's Settings, which only the user can switch on.
+The human-facing manual, with sample output and pictures, is `docs/` in this repository.

@@ -11,26 +11,35 @@ import {
   saveServer,
 } from "../config.js";
 import { print } from "../output.js";
+import { describe, familyGuide } from "./common.js";
 import { ask, askHidden, interactive, readStdin } from "../prompt.js";
 const formatMillis = (ms: number) =>
   new Date(ms).toISOString().replace("T", " ").slice(0, 19) + "Z";
 
 export function authCommand() {
-  const auth = new Command("auth")
-    .description("sign in to QuoteBridge with an API key")
-    .addHelpText(
-      "after",
-      `
-Subcommands:
-  server   set the QuoteBridge server URL (prompts; default ${DEFAULT_SERVER})
-  login    save an API key created in the app window (prompts for the key)
-  status   show the saved server, key name, scope and expiry (verifies with server)
-  logout   delete the saved API key locally
-
+  const auth = familyGuide(
+    new Command("auth"),
+    "sign in to QuoteBridge with an API key",
+    "Every other command needs a saved API key. Run auth status first; sign in only when it exits 3 (not signed in, or the key was revoked).",
+    `status   is the CLI signed in, to which server, with which key scope? (start
+         here; it checks the key with the server)
+server   set or change the server URL (prompts; default ${DEFAULT_SERVER})
+login    save an API key created in the app window (prompts for the key)
+logout   forget the saved API key on this computer`,
+    [
+      "auth status",
+      "auth server http://127.0.0.1:5580",
+      "auth login",
+      'echo "$QB_API_KEY" | mt4-quote-bridge auth login --api-key-stdin',
+    ]
+  ).addHelpText(
+    "after",
+    `
 Typical first run:
   1. In the QuoteBridge app window: Settings › API keys › create a key.
-     Scope "readonly" reads everything; "trader" can also preview, execute
-     and review trading requests. Keys are managed in the app window only.
+     Scope "readonly" reads everything; "trader" can also take screenshots
+     and preview, execute and review trading requests. Keys are managed in
+     the app window only.
   2. mt4-quote-bridge auth server     # enter the server URL (default ${DEFAULT_SERVER})
   3. mt4-quote-bridge auth login      # paste the API key
 
@@ -38,14 +47,14 @@ The server URL and API key are saved in ${configPath()}
 (override with MT4QB_CONFIG). Keys never expire unless an expiry was chosen
 when creating them; revoke them in the app window (Settings › API keys).
 Environment overrides: MT4QB_SERVER (server URL), MT4QB_API_KEY (API key).`
-    );
+  );
 
-  auth
-    .command("server")
+  describe(
+    auth.command("server"),
+    `set the QuoteBridge server URL (prompts when URL is omitted; default ${DEFAULT_SERVER})`,
+    "Use it on a first run, or when the app's HTTP port changed (Settings › Connection). The default is right for most people; changing the server forgets the saved key."
+  )
     .usage("[URL] [options]")
-    .description(
-      `set the QuoteBridge server URL (prompts when URL is omitted; default ${DEFAULT_SERVER})`
-    )
     .argument("[url]", "server URL, e.g. http://127.0.0.1:5580")
     .option("--no-check", "save without checking that the server is reachable")
     .option("--json", "print the result as JSON")
@@ -104,9 +113,11 @@ Exit codes: 0 saved (or printed), 1 server unreachable or incompatible, 2 invali
         );
     });
 
-  auth
-    .command("login")
-    .description("sign in with an API key from the app window and save it")
+  describe(
+    auth.command("login"),
+    "sign in with an API key from the app window and save it",
+    "Use it when auth status exits 3, or to switch to a key of another scope. Only a person can create a key, in the app window; an agent asks them for one and never creates, reads or prints it."
+  )
     .option(
       "-s, --server <url>",
       `QuoteBridge server URL (default: saved server, MT4QB_SERVER or ${DEFAULT_SERVER})`
@@ -127,7 +138,8 @@ API keys. The key looks like qbk_<64 hex> and is shown only once. Its scope
 decides what the CLI may do:
   readonly  every read: markets, accounts, Funds, positions, orders, requests,
             indicators, terminals
-  trader    also previews, requests execute and requests review (demo only)
+  trader    also screenshots, previews, requests execute and requests review
+            (trading on demo accounts only)
 
 The key is checked with the server (GET /api/auth/session) and saved to
 ${configPath()}
@@ -194,11 +206,11 @@ invalid URL, 3 key rejected.`
         );
     });
 
-  auth
-    .command("status")
-    .description(
-      "show the current sign-in and verify the API key with the server"
-    )
+  describe(
+    auth.command("status"),
+    "show the current sign-in and verify the API key with the server",
+    "Use it first in every session: it says whether the CLI can reach the app and whether the key works, and its scope says what you may do (readonly reads; trader also screenshots and trades on demo accounts)."
+  )
     .option("--json", "print the result as JSON")
     .addHelpText(
       "after",
@@ -257,9 +269,11 @@ revoked, 1 server unreachable.`
         );
     });
 
-  auth
-    .command("logout")
-    .description("delete the saved API key locally")
+  describe(
+    auth.command("logout"),
+    "delete the saved API key locally",
+    "Use it to stop this computer using a key. It only forgets the local copy; to disable the key everywhere, revoke it in the app window."
+  )
     .option("--json", "print the result as JSON")
     .addHelpText(
       "after",
@@ -294,7 +308,9 @@ const envelope = (data: unknown) => JSON.stringify({ data, meta: {} }, null, 2);
 export const isApiKey = (value: string) => /^qbk_[a-f0-9]{64}$/.test(value);
 
 const scopeLabel = (scope: string) =>
-  scope === "trader" ? "trader: reads, previews, execute, review" : "readonly";
+  scope === "trader"
+    ? "trader: reads, screenshots, previews, execute, review"
+    : "readonly";
 
 const expiryText = (expires: number | null) =>
   expires === null

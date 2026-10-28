@@ -2,16 +2,26 @@
 
 Command-line client for **QuoteBridge for MetaTrader**. It reads markets, quotes, candles, recorded samples, history,
 indicator values, trading accounts, Funds, positions and pending orders, prepares and sends demo trading requests,
-and takes screenshots of the app window, all through the app's REST API v1. The full manual, with every command and the API operation it calls, is
-`docs/cli.md` in the QuoteBridge repository; the API itself is `docs/rest-api.md`.
+and takes screenshots of the app window, all through the app's REST API v1.
 
 ```
 mt4-quote-bridge <command> <subcommand> [options]
 ```
 
-Every command has detailed `--help`. The agent skill
-[`.agents/skills/mt4-quote-bridge-cli`](.agents/skills/mt4-quote-bridge-cli/SKILL.md) adds the identity model and the
-trading protocol for agents.
+**The manual is [`docs/`](docs/README.md)**: getting started, concepts, one page per command family with sample
+output, the trading protocol, screenshots with pictures of how they work, and troubleshooting by exit code. The REST
+API itself is `docs/rest-api.md` in the QuoteBridge repository.
+
+Every command and subcommand has detailed `--help`, at three levels:
+
+```sh
+mt4-quote-bridge --help                    # which command fits a task
+mt4-quote-bridge markets --help            # which subcommand fits, with examples
+mt4-quote-bridge markets candles --help    # arguments, options, output, examples, exit codes
+```
+
+The agent skill [`.agents/skills/mt4-quote-bridge-cli`](.agents/skills/mt4-quote-bridge-cli/SKILL.md) tells an agent
+which command to reach for, when to read `--help`, and the rules for screenshots and trading.
 
 ## Install
 
@@ -34,7 +44,7 @@ mt4-quote-bridge config show        # effective server, config file, whether a k
 
 The app answers on this computer only (`127.0.0.1`, `localhost` or `[::1]`), on the HTTP port in its Settings ›
 Connection (5580 by default). Create a key in the **app window › Settings › API keys**: `readonly` reads everything;
-`trader` may also preview, execute and review trading requests. Keys, Demo trading, the lot cap and slippage are
+`trader` may also take screenshots and preview, execute and review trading requests. Keys, Demo trading, the lot cap and slippage are
 managed in the app window only. The key is saved to `~/.mt4-quote-bridge/config.json` with owner-only permissions;
 `MT4QB_SERVER`, `MT4QB_API_KEY` and `MT4QB_CONFIG` override the saved values. For scripts, pipe the key to
 `auth login --api-key-stdin`.
@@ -88,7 +98,9 @@ mt4-quote-bridge screenshot chart EURUSD --broker EasyForex-Demo --output chart.
   trader's own app window to that view and leave it there, so they need a `trader` key. By default they print the
   window's health (view, market, window state, live link, size, scale, time); `--json` adds the PNG in base64;
   `--output FILE` writes the PNG on this computer under the export rules, and with `--json` prints `path` and `bytes`
-  instead of the base64.
+  instead of the base64. How it works, with pictures: [docs/screenshots.md](docs/screenshots.md).
+
+![How a screenshot is taken](docs/images/screenshot-flow.svg)
 
 ## Exit codes
 

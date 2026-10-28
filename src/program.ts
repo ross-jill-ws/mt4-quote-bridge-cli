@@ -36,7 +36,7 @@ export function buildProgram(json = false) {
   const program = new Command("mt4-quote-bridge")
     .usage("<command> <subcommand> [options]")
     .description(
-      "Command-line client for QuoteBridge for MetaTrader (REST API v1): markets, accounts, positions,\npending orders, trading requests, indicators, terminals and screenshots."
+      "Command-line client for QuoteBridge for MetaTrader (REST API v1): markets, accounts, positions, pending orders, trading requests, indicators, terminals and screenshots.\n\nIt reads quotes, candles, recorded samples, history and indicator values, accounts' Funds, positions and pending orders; previews demo trades and sends one only on an explicit requests execute; and screenshots the app window to check its health."
     )
     .version(`${version} (REST API v${API_VERSION})`, "-V, --version")
     .showHelpAfterError("(add --help for usage)")
@@ -53,6 +53,37 @@ export function buildProgram(json = false) {
     .addHelpText(
       "after",
       `
+Start here:
+  mt4-quote-bridge auth status     signed in, and with which key scope?
+  mt4-quote-bridge markets list    the exact markets (broker server + symbol)
+  mt4-quote-bridge accounts list   the exact trading accounts and their IDs
+
+Which command:
+  the price now                      markets quote SYMBOL
+  OHLC bars                          markets candles SYMBOL --timeframe TF
+  every recorded bid/ask             markets samples SYMBOL
+  how much history there is          markets history SYMBOL
+  a CSV or MetaTrader HST file       markets export SYMBOL ... --output FILE
+  indicator values                   indicators list, then
+                                     markets indicator PACKAGE SYMBOL ...
+  balance, equity, free margin       accounts funds --account A
+  lot step, stop level, margin       accounts conditions SYMBOL --account A
+  open trades / pending orders       positions list / orders list --account A
+  a new trade                        orders preview --account A ...
+  change or end a trade              positions modify|close,
+                                     orders modify|cancel
+  send an approved preview           requests execute ID --confirm
+  what happened to a request         requests show ID
+  does the app look healthy?         screenshot feeds / screenshot chart SYMBOL
+  why is a market quiet?             terminals list, terminals feeds ID
+
+Help at every level:
+  mt4-quote-bridge --help                           this overview
+  mt4-quote-bridge <command> --help                 which subcommand fits a task
+  mt4-quote-bridge <command> <subcommand> --help    arguments, options, output,
+                                                    examples and exit codes
+  "mt4-quote-bridge help <command>" prints a command's help too.
+
 Examples:
   mt4-quote-bridge markets quote EURUSD --broker EasyForex-Demo
   mt4-quote-bridge markets candles EURUSD --broker EasyForex-Demo --timeframe H1
@@ -73,8 +104,9 @@ on stdout. Errors and hints go to stderr; with --json, errors are
 { error: { code, message, details } } on stderr. Prices, lots and money are
 decimal strings; times are UTC ISO-8601 with a brokerTime sibling.
 
-Configuration: ${configPath()} (MT4QB_CONFIG); MT4QB_SERVER and MT4QB_API_KEY
-override the saved server and key.
+Configuration: ${configPath()}
+(MT4QB_CONFIG); MT4QB_SERVER and MT4QB_API_KEY override the saved server and
+key.
 
 ${EXIT_HELP}`
     );

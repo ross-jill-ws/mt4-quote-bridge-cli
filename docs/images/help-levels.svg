@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="304" viewBox="0 0 980 304" role="img" aria-labelledby="title desc">
+  <title id="title">Help at every level</title>
+  <desc id="desc">Three levels of --help: the program's overview says which command fits a task; a command family's help says which subcommand to use; a subcommand's help gives arguments, options, output, examples, related commands and exit codes.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2c3e50"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; fill: #2c3e50; }
+      .title { font-size: 18px; font-weight: 700; }
+      .lvl { font-size: 12px; font-weight: 700; fill: #ffffff; letter-spacing: .05em; }
+      .cmd { font-family: Consolas, Menlo, "Courier New", monospace; font-size: 13px; font-weight: 700; fill: #ffffff; }
+      .q { font-size: 13px; font-style: italic; fill: #34495e; }
+      .i { font-size: 12.5px; fill: #2c3e50; }
+    </style>
+  </defs>
+  <rect width="980" height="304" fill="#ffffff"/>
+  <text x="20" y="30" class="title">Help at every level: start broad, drill down only as far as the task needs</text>
+
+  <rect x="20" y="50" width="290" height="236" rx="8" fill="#e8f4f8" stroke="#3498db"/>
+  <rect x="20" y="50" width="290" height="52" rx="8" fill="#3498db"/>
+  <text x="34" y="70" class="lvl">LEVEL 1 · THE PROGRAM</text>
+  <text x="34" y="91" class="cmd">mt4-quote-bridge --help</text>
+  <text x="34" y="124" class="q">"Which command does this?"</text>
+  <text x="34" y="150" class="i">• Start here: auth status, markets list,</text>
+  <text x="46" y="167" class="i">accounts list</text>
+  <text x="34" y="189" class="i">• Which command: a task → its command</text>
+  <text x="34" y="211" class="i">• Help at every level</text>
+  <text x="34" y="233" class="i">• Identities, output, configuration</text>
+  <text x="34" y="255" class="i">• Every exit code</text>
+
+  <line x1="314" y1="180" x2="342" y2="180" stroke="#2c3e50" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <rect x="346" y="50" width="290" height="236" rx="8" fill="#eafaf1" stroke="#27ae60"/>
+  <rect x="346" y="50" width="290" height="52" rx="8" fill="#27ae60"/>
+  <text x="360" y="70" class="lvl">LEVEL 2 · A COMMAND FAMILY</text>
+  <text x="360" y="91" class="cmd">mt4-quote-bridge markets --help</text>
+  <text x="360" y="124" class="q">"Which subcommand fits?"</text>
+  <text x="360" y="150" class="i">• What the family covers, which key</text>
+  <text x="360" y="172" class="i">• Commands, one line each</text>
+  <text x="360" y="194" class="i">• Which subcommand: when to use each</text>
+  <text x="360" y="216" class="i">• Examples</text>
+  <text x="360" y="238" class="i">• More help: where each subcommand's</text>
+  <text x="372" y="255" class="i">own --help is</text>
+
+  <line x1="640" y1="180" x2="668" y2="180" stroke="#2c3e50" stroke-width="1.8" marker-end="url(#arrow)"/>
+
+  <rect x="672" y="50" width="290" height="236" rx="8" fill="#fef5e7" stroke="#f39c12"/>
+  <rect x="672" y="50" width="290" height="52" rx="8" fill="#e67e22"/>
+  <text x="686" y="70" class="lvl">LEVEL 3 · A SUBCOMMAND</text>
+  <text x="686" y="91" class="cmd">… markets candles --help</text>
+  <text x="686" y="124" class="q">"Exactly how do I run it?"</text>
+  <text x="686" y="150" class="i">• What it does and when to use it</text>
+  <text x="686" y="172" class="i">• Arguments and options</text>
+  <text x="686" y="194" class="i">• Market / account selection, times</text>
+  <text x="686" y="216" class="i">• Output: table columns, --json shape</text>
+  <text x="686" y="238" class="i">• Examples and See also</text>
+  <text x="686" y="260" class="i">• Exit codes</text>
+</svg>

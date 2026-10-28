@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="640" viewBox="0 0 980 640" role="img" aria-labelledby="title desc">
+  <title id="title">What each screenshot shows</title>
+  <desc id="desc">Schematic of the two captures. screenshot feeds shows the Feeds view: the left rail with the Live status, and per terminal a group of feeds with symbol, bid, ask, spread, quote time, status and record. screenshot chart shows the Charts view of one market from its best source feed: candles, indicators, the Ask line and trade lines.</desc>
+  <defs>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; fill: #2c3e50; }
+      .title { font-size: 18px; font-weight: 700; }
+      .cmd { font-family: Consolas, Menlo, "Courier New", monospace; font-size: 13px; font-weight: 700; fill: #2c3e50; }
+      .nav { font-size: 11px; fill: #d5dbdb; }
+      .navon { font-size: 11px; fill: #ffffff; font-weight: 700; }
+      .h { font-size: 12px; font-weight: 700; }
+      .c { font-size: 10.5px; fill: #566573; }
+      .v { font-family: Consolas, Menlo, "Courier New", monospace; font-size: 10.5px; fill: #2c3e50; }
+      .tag { font-size: 11px; font-weight: 700; fill: #ffffff; }
+      .n { font-size: 12.5px; fill: #34495e; }
+      .nb { font-size: 12.5px; font-weight: 700; fill: #2c3e50; }
+      .foot { font-size: 11.5px; fill: #7f8c8d; font-style: italic; }
+    </style>
+  </defs>
+  <rect width="980" height="640" fill="#ffffff"/>
+  <text x="20" y="30" class="title">What the PNG shows, and what to look for</text>
+
+  <!-- ===== Feeds ===== -->
+  <text x="20" y="58" class="cmd">screenshot feeds</text>
+  <rect x="20" y="68" width="450" height="320" rx="6" fill="#f8f9fa" stroke="#2c3e50"/>
+  <rect x="20" y="68" width="450" height="20" rx="6" fill="#2c3e50"/>
+  <text x="30" y="82" class="tag">QuoteBridge</text>
+  <rect x="21" y="88" width="100" height="299" fill="#34495e"/>
+  <text x="32" y="110" class="navon">Feeds</text>
+  <rect x="26" y="99" width="3" height="15" fill="#3498db"/>
+  <text x="32" y="130" class="nav">Terminals</text>
+  <text x="32" y="150" class="nav">Charts</text>
+  <text x="32" y="170" class="nav">Trading</text>
+  <text x="32" y="190" class="nav">History</text>
+  <text x="32" y="210" class="nav">Indicators</text>
+  <text x="32" y="230" class="nav">Settings</text>
+  <circle cx="34" cy="366" r="4" fill="#2ecc71"/>
+  <text x="44" y="370" class="navon">Live</text>
+  <!-- group 1 -->
+  <text x="134" y="112" class="h">Demo terminal</text>
+  <text x="230" y="112" class="v">mt4-aaaaaaaaaaaa</text>
+  <circle cx="376" cy="108" r="3.5" fill="#2ecc71"/>
+  <text x="384" y="112" class="c">Online</text>
+  <rect x="134" y="120" width="326" height="16" fill="#eaf2f8"/>
+  <text x="138" y="132" class="c">Symbol</text><text x="196" y="132" class="c">Bid</text><text x="246" y="132" class="c">Ask</text><text x="294" y="132" class="c">Spread</text><text x="340" y="132" class="c">Quote time</text><text x="406" y="132" class="c">Status</text>
+  <text x="138" y="151" class="v">EURUSD</text><text x="190" y="151" class="v">1.10000</text><text x="240" y="151" class="v">1.10015</text><text x="300" y="151" class="v">15</text><text x="340" y="151" class="v">10:00:00</text><text x="406" y="151" class="c">Live</text>
+  <text x="138" y="169" class="v">GBPUSD</text><text x="190" y="169" class="v">1.27010</text><text x="240" y="169" class="v">1.27028</text><text x="300" y="169" class="v">18</text><text x="340" y="169" class="v">10:00:00</text><text x="406" y="169" class="c">Live</text>
+  <text x="138" y="187" class="v">USDJPY</text><text x="190" y="187" class="v">151.204</text><text x="240" y="187" class="v">151.219</text><text x="300" y="187" class="v">15</text><text x="340" y="187" class="v">09:59:58</text><text x="406" y="187" class="c">Live</text>
+  <!-- group 2, quiet -->
+  <text x="134" y="226" class="h">Second terminal</text>
+  <text x="240" y="226" class="v">mt4-bbbbbbbbbbbb</text>
+  <circle cx="376" cy="222" r="3.5" fill="#95a5a6"/>
+  <text x="384" y="226" class="c">Offline</text>
+  <rect x="134" y="234" width="326" height="16" fill="#eaf2f8"/>
+  <text x="138" y="246" class="c">Symbol</text><text x="196" y="246" class="c">Bid</text><text x="246" y="246" class="c">Ask</text><text x="294" y="246" class="c">Spread</text><text x="340" y="246" class="c">Quote time</text><text x="406" y="246" class="c">Status</text>
+  <text x="138" y="265" class="v">XAUUSD</text><text x="190" y="265" class="v">2031.10</text><text x="240" y="265" class="v">2031.45</text><text x="300" y="265" class="v">35</text><text x="340" y="265" class="v">09:41:12</text><text x="406" y="265" class="c" style="fill:#c0392b">Stale</text>
+  <!-- callouts -->
+  <circle cx="60" cy="350" r="9" fill="#e67e22"/><text x="60" y="354" text-anchor="middle" class="tag">1</text>
+  <circle cx="452" cy="108" r="9" fill="#e67e22"/><text x="452" y="112" text-anchor="middle" class="tag">2</text>
+  <circle cx="452" cy="170" r="9" fill="#e67e22"/><text x="452" y="174" text-anchor="middle" class="tag">3</text>
+  <circle cx="452" cy="265" r="9" fill="#e67e22"/><text x="452" y="269" text-anchor="middle" class="tag">4</text>
+
+  <text x="20" y="414" class="nb">Healthy Feeds</text>
+  <text x="20" y="436" class="n"><tspan class="nb">1</tspan>  Live status: Live, not Connecting…, Reconnecting… or Disconnected</text>
+  <text x="38" y="453" class="n">(the "live" field: live, connecting, reconnecting, session-ended).</text>
+  <text x="20" y="475" class="n"><tspan class="nb">2</tspan>  Every terminal you expect has a group, marked online.</text>
+  <text x="20" y="497" class="n"><tspan class="nb">3</tspan>  Quote times move; bid and ask look sane; spreads are normal.</text>
+  <text x="20" y="519" class="n"><tspan class="nb">4</tspan>  A stale or offline row is what to investigate next:</text>
+  <text x="38" y="536" class="n">terminals list, terminals feeds ID, markets quote SYMBOL.</text>
+
+  <!-- ===== Chart ===== -->
+  <text x="510" y="58" class="cmd">screenshot chart EURUSD --broker EasyForex-Demo</text>
+  <rect x="510" y="68" width="450" height="320" rx="6" fill="#f8f9fa" stroke="#2c3e50"/>
+  <rect x="510" y="68" width="450" height="20" rx="6" fill="#2c3e50"/>
+  <text x="520" y="82" class="tag">QuoteBridge</text>
+  <rect x="511" y="88" width="100" height="299" fill="#34495e"/>
+  <text x="522" y="110" class="nav">Feeds</text>
+  <text x="522" y="130" class="nav">Terminals</text>
+  <text x="522" y="150" class="navon">Charts</text>
+  <rect x="516" y="139" width="3" height="15" fill="#3498db"/>
+  <text x="522" y="170" class="nav">Trading</text>
+  <text x="522" y="190" class="nav">History</text>
+  <text x="522" y="210" class="nav">Indicators</text>
+  <text x="522" y="230" class="nav">Settings</text>
+  <circle cx="524" cy="366" r="4" fill="#2ecc71"/>
+  <text x="534" y="370" class="navon">Live</text>
+  <text x="624" y="110" class="h">EURUSD · EasyForex-Demo</text>
+  <rect x="776" y="99" width="26" height="15" rx="3" fill="#d6eaf8"/><text x="780" y="110" class="c">H1</text>
+  <text x="810" y="110" class="c">Candles · MA(20) · MACD</text>
+  <rect x="624" y="120" width="326" height="180" fill="#ffffff" stroke="#d5dbdb"/>
+  <!-- Ask line -->
+  <line x1="624" y1="152" x2="950" y2="152" stroke="#3498db" stroke-dasharray="4 3"/>
+  <text x="946" y="148" text-anchor="end" class="v" style="fill:#3498db">Ask 1.10015</text>
+  <!-- trade lines -->
+  <line x1="624" y1="232" x2="950" y2="232" stroke="#27ae60"/>
+  <text x="946" y="228" text-anchor="end" class="v" style="fill:#27ae60">buy 0.10 @ 1.09820</text>
+  <line x1="624" y1="276" x2="950" y2="276" stroke="#e74c3c" stroke-dasharray="6 3"/>
+  <text x="946" y="272" text-anchor="end" class="v" style="fill:#e74c3c">SL 1.09600</text>
+  <!-- candles -->
+  <g>
+    <line x1="660" y1="250" x2="660" y2="280" stroke="#27ae60"/><rect x="655" y="256" width="10" height="16" fill="#27ae60"/>
+    <line x1="680" y1="240" x2="680" y2="268" stroke="#27ae60"/><rect x="675" y="246" width="10" height="16" fill="#27ae60"/>
+    <line x1="700" y1="236" x2="700" y2="262" stroke="#e74c3c"/><rect x="695" y="242" width="10" height="13" fill="#e74c3c"/>
+    <line x1="720" y1="222" x2="720" y2="252" stroke="#27ae60"/><rect x="715" y="228" width="10" height="18" fill="#27ae60"/>
+    <line x1="740" y1="212" x2="740" y2="240" stroke="#27ae60"/><rect x="735" y="217" width="10" height="16" fill="#27ae60"/>
+    <line x1="760" y1="216" x2="760" y2="244" stroke="#e74c3c"/><rect x="755" y="221" width="10" height="15" fill="#e74c3c"/>
+    <line x1="780" y1="200" x2="780" y2="230" stroke="#27ae60"/><rect x="775" y="206" width="10" height="18" fill="#27ae60"/>
+    <line x1="800" y1="190" x2="800" y2="218" stroke="#27ae60"/><rect x="795" y="195" width="10" height="16" fill="#27ae60"/>
+    <line x1="820" y1="192" x2="820" y2="222" stroke="#e74c3c"/><rect x="815" y="198" width="10" height="17" fill="#e74c3c"/>
+    <line x1="840" y1="182" x2="840" y2="210" stroke="#27ae60"/><rect x="835" y="187" width="10" height="16" fill="#27ae60"/>
+    <line x1="860" y1="172" x2="860" y2="200" stroke="#27ae60"/><rect x="855" y="177" width="10" height="17" fill="#27ae60"/>
+    <line x1="880" y1="166" x2="880" y2="192" stroke="#e74c3c"/><rect x="875" y="171" width="10" height="14" fill="#e74c3c"/>
+    <line x1="900" y1="158" x2="900" y2="184" stroke="#27ae60"/><rect x="895" y="163" width="10" height="15" fill="#27ae60"/>
+    <line x1="920" y1="154" x2="920" y2="176" stroke="#27ae60"/><rect x="915" y="158" width="10" height="12" fill="#27ae60"/>
+  </g>
+  <polyline points="660,268 700,252 740,236 780,222 820,208 860,194 900,178 930,170" fill="none" stroke="#8e44ad" stroke-width="2"/>
+  <!-- indicator pane -->
+  <rect x="624" y="306" width="326" height="70" fill="#ffffff" stroke="#d5dbdb"/>
+  <line x1="624" y1="341" x2="950" y2="341" stroke="#d5dbdb"/>
+  <g fill="#85c1e9">
+    <rect x="656" y="341" width="8" height="10"/><rect x="676" y="341" width="8" height="6"/><rect x="696" y="337" width="8" height="4"/>
+    <rect x="716" y="331" width="8" height="10"/><rect x="736" y="327" width="8" height="14"/><rect x="756" y="329" width="8" height="12"/>
+    <rect x="776" y="324" width="8" height="17"/><rect x="796" y="320" width="8" height="21"/><rect x="816" y="323" width="8" height="18"/>
+    <rect x="836" y="319" width="8" height="22"/><rect x="856" y="315" width="8" height="26"/><rect x="876" y="318" width="8" height="23"/>
+    <rect x="896" y="314" width="8" height="27"/><rect x="916" y="316" width="8" height="25"/>
+  </g>
+  <text x="630" y="318" class="c">MACD</text>
+  <!-- callouts -->
+  <circle cx="614" cy="106" r="9" fill="#e67e22"/><text x="614" y="110" text-anchor="middle" class="tag">1</text>
+  <circle cx="940" cy="200" r="9" fill="#e67e22"/><text x="940" y="204" text-anchor="middle" class="tag">2</text>
+  <circle cx="614" cy="232" r="9" fill="#e67e22"/><text x="614" y="236" text-anchor="middle" class="tag">3</text>
+  <circle cx="614" cy="340" r="9" fill="#e67e22"/><text x="614" y="344" text-anchor="middle" class="tag">4</text>
+
+  <text x="510" y="414" class="nb">Healthy chart</text>
+  <text x="510" y="436" class="n"><tspan class="nb">1</tspan>  The market you named, at the period the window remembers.</text>
+  <text x="510" y="458" class="n"><tspan class="nb">2</tspan>  Candles up to now, the Ask line at the current price.</text>
+  <text x="510" y="480" class="n"><tspan class="nb">3</tspan>  Open trades and their stops, unless trade lines are off.</text>
+  <text x="510" y="502" class="n"><tspan class="nb">4</tspan>  Every indicator on the chart has drawn its values.</text>
+  <text x="510" y="524" class="n">Still loading after six seconds? It is captured as it is:</text>
+  <text x="510" y="541" class="n">check markets candles and markets show for that market.</text>
+
+  <rect x="20" y="566" width="940" height="56" rx="8" fill="#fef5e7" stroke="#f39c12"/>
+  <text x="36" y="589" class="n"><tspan class="nb">Read data from data commands.</tspan> A screenshot shows that the app looks right; the numbers come from</text>
+  <text x="36" y="608" class="n">markets quote, markets candles, markets indicator and accounts funds, never from reading a picture.</text>
+  <text x="960" y="636" text-anchor="end" class="foot">Schematic: what to look for, not the app's exact look.</text>
+</svg>

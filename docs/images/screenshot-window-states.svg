@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="980" height="660" viewBox="0 0 980 660" role="img" aria-labelledby="title desc">
+  <title id="title">A screenshot leaves the window where it was</title>
+  <desc id="desc">Three cases: a window shown on screen, minimised to the taskbar, or hidden in the tray. In each, screenshot chart EURUSD captures the full window drawing EURUSD's chart, without showing or focusing it; afterwards the window is still shown, minimised or hidden, but its view is now EURUSD's chart.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2c3e50"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; fill: #2c3e50; }
+      .title { font-size: 18px; font-weight: 700; }
+      .col { font-size: 15px; font-weight: 700; }
+      .row { font-size: 12px; font-weight: 700; fill: #7f8c8d; letter-spacing: .06em; }
+      .s { font-size: 12.5px; fill: #34495e; }
+      .m { font-family: Consolas, Menlo, "Courier New", monospace; font-size: 12px; fill: #2c3e50; }
+      .tiny { font-size: 7px; fill: #ffffff; }
+      .tinyd { font-size: 7.5px; fill: #2c3e50; }
+    </style>
+    <!-- The app window: title bar, left rail with Live status, main area. -->
+    <symbol id="frame" viewBox="0 0 200 130">
+      <rect x="0.5" y="0.5" width="199" height="129" rx="4" fill="#f8f9fa" stroke="#2c3e50"/>
+      <rect x="0.5" y="0.5" width="199" height="13" rx="4" fill="#2c3e50"/>
+      <text x="6" y="10" class="tiny">QuoteBridge</text>
+      <rect x="1" y="14" width="38" height="115" fill="#34495e"/>
+      <rect x="5" y="20" width="28" height="4" rx="1" fill="#ffffff" opacity=".45"/>
+      <rect x="5" y="29" width="28" height="4" rx="1" fill="#ffffff" opacity=".45"/>
+      <rect x="5" y="38" width="28" height="4" rx="1" fill="#ffffff" opacity=".45"/>
+      <rect x="5" y="47" width="28" height="4" rx="1" fill="#ffffff" opacity=".45"/>
+      <rect x="5" y="56" width="28" height="4" rx="1" fill="#ffffff" opacity=".45"/>
+      <circle cx="8" cy="120" r="2.5" fill="#2ecc71"/>
+      <text x="13" y="122.5" class="tiny">Live</text>
+    </symbol>
+    <symbol id="trading" viewBox="0 0 200 130">
+      <use href="#frame" xlink:href="#frame" width="200" height="130"/>
+      <rect x="5" y="47" width="28" height="4" rx="1" fill="#3498db"/>
+      <text x="46" y="26" class="tinyd">Trading</text>
+      <rect x="46" y="32" width="146" height="7" fill="#d6eaf8"/>
+      <rect x="46" y="42" width="146" height="5" fill="#eaecee"/>
+      <rect x="46" y="50" width="146" height="5" fill="#eaecee"/>
+      <rect x="46" y="58" width="146" height="5" fill="#eaecee"/>
+      <rect x="46" y="76" width="70" height="40" rx="2" fill="#eaecee"/>
+      <rect x="122" y="76" width="70" height="40" rx="2" fill="#eaecee"/>
+    </symbol>
+    <symbol id="chart" viewBox="0 0 200 130">
+      <use href="#frame" xlink:href="#frame" width="200" height="130"/>
+      <rect x="5" y="38" width="28" height="4" rx="1" fill="#3498db"/>
+      <text x="46" y="26" class="tinyd">EURUSD · EasyForex-Demo · H1</text>
+      <rect x="46" y="32" width="146" height="90" fill="#ffffff" stroke="#d5dbdb"/>
+      <g stroke-width="1">
+        <line x1="54" y1="92" x2="54" y2="108" stroke="#27ae60"/><rect x="52" y="96" width="4" height="9" fill="#27ae60"/>
+        <line x1="62" y1="86" x2="62" y2="102" stroke="#27ae60"/><rect x="60" y="89" width="4" height="9" fill="#27ae60"/>
+        <line x1="70" y1="84" x2="70" y2="100" stroke="#e74c3c"/><rect x="68" y="87" width="4" height="8" fill="#e74c3c"/>
+        <line x1="78" y1="76" x2="78" y2="96" stroke="#27ae60"/><rect x="76" y="80" width="4" height="12" fill="#27ae60"/>
+        <line x1="86" y1="70" x2="86" y2="88" stroke="#27ae60"/><rect x="84" y="73" width="4" height="10" fill="#27ae60"/>
+        <line x1="94" y1="72" x2="94" y2="90" stroke="#e74c3c"/><rect x="92" y="75" width="4" height="10" fill="#e74c3c"/>
+        <line x1="102" y1="64" x2="102" y2="84" stroke="#27ae60"/><rect x="100" y="68" width="4" height="12" fill="#27ae60"/>
+        <line x1="110" y1="58" x2="110" y2="76" stroke="#27ae60"/><rect x="108" y="61" width="4" height="10" fill="#27ae60"/>
+        <line x1="118" y1="60" x2="118" y2="80" stroke="#e74c3c"/><rect x="116" y="63" width="4" height="12" fill="#e74c3c"/>
+        <line x1="126" y1="66" x2="126" y2="86" stroke="#e74c3c"/><rect x="124" y="70" width="4" height="11" fill="#e74c3c"/>
+        <line x1="134" y1="62" x2="134" y2="80" stroke="#27ae60"/><rect x="132" y="66" width="4" height="10" fill="#27ae60"/>
+        <line x1="142" y1="52" x2="142" y2="72" stroke="#27ae60"/><rect x="140" y="55" width="4" height="13" fill="#27ae60"/>
+        <line x1="150" y1="46" x2="150" y2="64" stroke="#27ae60"/><rect x="148" y="49" width="4" height="11" fill="#27ae60"/>
+        <line x1="158" y1="48" x2="158" y2="66" stroke="#e74c3c"/><rect x="156" y="51" width="4" height="10" fill="#e74c3c"/>
+        <line x1="166" y1="42" x2="166" y2="60" stroke="#27ae60"/><rect x="164" y="45" width="4" height="11" fill="#27ae60"/>
+        <line x1="174" y1="38" x2="174" y2="54" stroke="#27ae60"/><rect x="172" y="41" width="4" height="9" fill="#27ae60"/>
+      </g>
+      <polyline points="54,104 70,96 86,86 102,78 118,72 134,72 150,62 166,55 182,49" fill="none" stroke="#8e44ad" stroke-width="1.3"/>
+      <line x1="46" y1="44" x2="192" y2="44" stroke="#3498db" stroke-width=".8" stroke-dasharray="3 2"/>
+    </symbol>
+    <!-- A screen with a taskbar; the tray sits at its right end. -->
+    <symbol id="screen" viewBox="0 0 260 170">
+      <rect x="1" y="1" width="258" height="168" rx="6" fill="#ecf0f1" stroke="#7f8c8d" stroke-width="2"/>
+      <rect x="2" y="150" width="256" height="18" fill="#2c3e50"/>
+      <rect x="8" y="154" width="10" height="10" rx="2" fill="#3498db"/>
+      <text x="246" y="163" text-anchor="end" style="font-size:8px;fill:#ffffff">08:00</text>
+    </symbol>
+  </defs>
+  <rect width="980" height="660" fill="#ffffff"/>
+  <text x="20" y="32" class="title">The window is captured where it is, and left there on the new view</text>
+
+  <text x="20" y="70" class="row">BEFORE</text>
+  <text x="20" y="300" class="row">CAPTURED</text>
+  <text x="20" y="500" class="row">AFTER</text>
+
+  <!-- column 1: visible -->
+  <text x="185" y="70" text-anchor="middle" class="col">Shown on screen</text>
+  <use href="#screen" xlink:href="#screen" x="55" y="82" width="260" height="170"/>
+  <use href="#trading" xlink:href="#trading" x="85" y="94" width="200" height="130"/>
+
+  <!-- column 2: minimised -->
+  <text x="490" y="70" text-anchor="middle" class="col">Minimised to the taskbar</text>
+  <use href="#screen" xlink:href="#screen" x="360" y="82" width="260" height="170"/>
+  <rect x="384" y="234" width="18" height="12" rx="2" fill="#3498db" stroke="#f8c471" stroke-width="1.5"/>
+  <text x="410" y="244" style="font-size:9px;fill:#ffffff">QuoteBridge (minimised)</text>
+
+  <!-- column 3: tray -->
+  <text x="795" y="70" text-anchor="middle" class="col">Hidden in the tray</text>
+  <use href="#screen" xlink:href="#screen" x="665" y="82" width="260" height="170"/>
+  <circle cx="872" cy="240" r="5" fill="#3498db" stroke="#f8c471" stroke-width="1.5"/>
+  <text x="864" y="226" text-anchor="end" style="font-size:9px;fill:#2c3e50">QuoteBridge in the tray</text>
+
+  <!-- the command -->
+  <line x1="490" y1="262" x2="490" y2="284" stroke="#2c3e50" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <rect x="300" y="286" width="380" height="28" rx="14" fill="#e8f4f8" stroke="#3498db"/>
+  <text x="490" y="305" text-anchor="middle" class="m">mt4-quote-bridge screenshot chart EURUSD …</text>
+  <line x1="185" y1="262" x2="185" y2="330" stroke="#95a5a6" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arrow)"/>
+  <line x1="795" y1="262" x2="795" y2="330" stroke="#95a5a6" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arrow)"/>
+  <line x1="490" y1="314" x2="490" y2="330" stroke="#95a5a6" stroke-width="1.4" stroke-dasharray="4 4" marker-end="url(#arrow)"/>
+
+  <!-- captured: the same full image in every case -->
+  <use href="#chart" xlink:href="#chart" x="95" y="336" width="180" height="117"/>
+  <use href="#chart" xlink:href="#chart" x="400" y="336" width="180" height="117"/>
+  <use href="#chart" xlink:href="#chart" x="705" y="336" width="180" height="117"/>
+  <text x="490" y="474" text-anchor="middle" class="s">The same PNG every time: the whole window at its own size and display scale (width × height, scale), drawn as if shown.</text>
+
+  <!-- after -->
+  <use href="#screen" xlink:href="#screen" x="80" y="490" width="210" height="137"/>
+  <use href="#chart" xlink:href="#chart" x="104" y="500" width="162" height="105"/>
+
+  <use href="#screen" xlink:href="#screen" x="385" y="490" width="210" height="137"/>
+  <rect x="404" y="608" width="15" height="10" rx="2" fill="#3498db"/>
+  <text x="490" y="560" text-anchor="middle" class="s">still minimised; restoring it</text>
+  <text x="490" y="577" text-anchor="middle" class="s">shows EURUSD's chart</text>
+
+  <use href="#screen" xlink:href="#screen" x="690" y="490" width="210" height="137"/>
+  <circle cx="860" cy="612" r="4.5" fill="#3498db"/>
+  <text x="795" y="560" text-anchor="middle" class="s">still in the tray; opening it</text>
+  <text x="795" y="577" text-anchor="middle" class="s">shows EURUSD's chart</text>
+
+  <text x="185" y="648" text-anchor="middle" class="m">"window": "visible"</text>
+  <text x="490" y="648" text-anchor="middle" class="m">"window": "minimised"</text>
+  <text x="795" y="648" text-anchor="middle" class="m">"window": "hidden"</text>
+</svg>
