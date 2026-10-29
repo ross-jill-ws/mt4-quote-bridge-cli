@@ -12,17 +12,51 @@
 
 ## Install
 
-From a clone of this repository:
+### With an AI agent
+
+Add the skill to your agent (Claude Code, Codex, Cursor and [others](https://github.com/vercel-labs/skills)):
 
 ```sh
-npm install
-npm run build
-npm link            # puts `mt4-quote-bridge` on your PATH
+npx skills@latest add https://github.com/ross-jill-ws/mt4-quote-bridge-cli
+```
+
+It asks which agents to add it to, and whether to add it to this project or globally (`-g`). You don't install the
+CLI yourself. The first time the agent uses the skill, the skill's `scripts/ensure-cli.mjs` installs `mt4-quote-bridge`
+from GitHub, building it and then installing it globally with npm. This takes about a minute once. After
+that, the script only confirms the installed version, and it updates the CLI when an updated skill needs a newer
+version. To update the skill, run `npx skills@latest update`.
+
+If the agent reports that the install failed, the message says why:
+
+- **Node.js older than 22.12:** upgrade Node.js.
+- **`EACCES` from npm:** your global npm folder isn't writable. Run `npm config set prefix ~/.npm-global`, add its
+  `bin` folder to PATH, or run the CLI-only install below yourself.
+- **Not on PATH:** add npm's global folder to PATH. `npm prefix --global` prints it; outside Windows, add its `bin`
+  subfolder.
+
+### The CLI alone
+
+Build a package from GitHub, then install the `.tgz` file that `npm pack` names:
+
+```sh
+npm pack github:ross-jill-ws/mt4-quote-bridge-cli
+npm install --global ./mt4-quote-bridge-cli-0.2.0.tgz
 mt4-quote-bridge --version
 ```
 
-`--version` prints the CLI's version and the REST API version it speaks, such as `0.2.0 (REST API v1)`. Without
-`npm link`, run `node dist/cli.js …` from the repository instead.
+Use these two steps rather than `npm install --global github:…`. With `--global`, npm skips the TypeScript build
+dependencies when it prepares a package from git, so that build fails.
+
+`--version` prints the CLI's version and the REST API version it speaks, such as `0.2.0 (REST API v1)`.
+
+### From a clone, for development
+
+```sh
+npm install         # also builds, through the prepare script
+npm link            # puts `mt4-quote-bridge` on your PATH
+```
+
+Without `npm link`, run `node dist/cli.js …` from the repository instead.
 
 ## Create an API key (in the app window)
 
