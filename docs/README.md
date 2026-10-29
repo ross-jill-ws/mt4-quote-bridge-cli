@@ -79,5 +79,7 @@ mt4-quote-bridge screenshot feeds --output feeds.png           # does the app lo
 
 ## For agents
 
-The agent skill [`.agents/skills/mt4-quote-bridge-cli`](../.agents/skills/mt4-quote-bridge-cli/SKILL.md) tells an
+The agent skill [`skills/mt4-quote-bridge-cli`](../skills/mt4-quote-bridge-cli/SKILL.md) tells an
 AI agent which command to reach for, when to read `--help`, and the rules for screenshots and trading it must follow.
+Add it with `npx skills@latest add https://github.com/ross-jill-ws/mt4-quote-bridge-cli`; it installs the CLI itself on
+first use. See [Getting started](getting-started.md#with-an-ai-agent).

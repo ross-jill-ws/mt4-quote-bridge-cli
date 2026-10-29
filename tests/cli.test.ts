@@ -1157,3 +1157,9 @@ test("screenshot refusals print the app's words, exit with the codes --help list
     await cleanup();
   }
 });
+
+test("the skill's installer requires this package's version", async () => {
+  const pkg = JSON.parse(await readFile("package.json", "utf8")) as { version: string };
+  const script = await readFile("skills/mt4-quote-bridge-cli/scripts/ensure-cli.mjs", "utf8");
+  assert.equal(/const REQUIRED = "([^"]+)"/.exec(script)?.[1], pkg.version);
+});

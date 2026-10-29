@@ -20,16 +20,34 @@ mt4-quote-bridge markets --help            # which subcommand fits, with example
 mt4-quote-bridge markets candles --help    # arguments, options, output, examples, exit codes
 ```
 
-The agent skill [`.agents/skills/mt4-quote-bridge-cli`](.agents/skills/mt4-quote-bridge-cli/SKILL.md) tells an agent
+The agent skill [`skills/mt4-quote-bridge-cli`](skills/mt4-quote-bridge-cli/SKILL.md) tells an agent
 which command to reach for, when to read `--help`, and the rules for screenshots and trading.
 
 ## Install
 
 Requires Node.js ≥ 22.12 and QuoteBridge with REST API v1.
 
+**For an AI agent** (Claude Code, Codex, Cursor and others), add the skill:
+
 ```sh
-npm install
-npm run build
+npx skills@latest add https://github.com/ross-jill-ws/mt4-quote-bridge-cli
+```
+
+The skill brings the CLI with it: the first time the agent uses it, the skill's `scripts/ensure-cli.mjs` installs
+`mt4-quote-bridge` from GitHub (npm builds it, then installs it globally), and it updates the CLI when a newer skill
+needs a newer version. `npx skills@latest update` updates the skill.
+
+**The CLI alone:** build a package from GitHub, then install the `.tgz` file that `npm pack` names:
+
+```sh
+npm pack github:ross-jill-ws/mt4-quote-bridge-cli
+npm install --global ./mt4-quote-bridge-cli-0.2.0.tgz
+```
+
+**From a clone**, for development:
+
+```sh
+npm install         # also builds
 npm link            # puts `mt4-quote-bridge` on PATH
 ```
 

@@ -7,7 +7,15 @@ description: Read MetaTrader market and account data, prepare demo trades and ch
 
 The CLI speaks QuoteBridge's REST API v1. Its `--help` is the reference, at every level; this skill says which command to reach for and the rules the help cannot enforce.
 
-If `mt4-quote-bridge` is not on PATH, run `node dist/cli.js` from this repository after `npm run build`.
+## 0. Make sure the CLI is installed
+
+Once per session, before the first command, run the script that ships in this skill's folder:
+
+```sh
+node <this skill's folder>/scripts/ensure-cli.mjs
+```
+
+It prints `ready <version>` when `mt4-quote-bridge` is on PATH and current. Otherwise it first builds the CLI from GitHub and installs or updates it with npm, so the first run can take a minute. If it exits `1`, show the user its message and stop: it names what they need to fix (Node.js 22.12+, a writable global npm folder, or PATH).
 
 ## 1. Let `--help` lead
 
@@ -64,4 +72,4 @@ Before any preview (`orders preview|modify|cancel`, `positions modify|close`), `
 
 For any exit code other than `0`, read [references/errors.md](references/errors.md) for what it means and who acts next. Every subcommand's `--help` also ends with its exit codes.
 
-The human-facing manual, with sample output and pictures, is `docs/` in this repository.
+The human-facing manual, with sample output and pictures, is [docs/](https://github.com/ross-jill-ws/mt4-quote-bridge-cli/tree/main/docs) on GitHub.
